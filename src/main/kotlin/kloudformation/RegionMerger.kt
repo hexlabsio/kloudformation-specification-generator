@@ -9,7 +9,7 @@ object RegionMerger{
         val allRegions = regions.map {
             jackson.readValue<RegionSpec>( RegionMerger::class.java.classLoader.getResource("specifications/$it.json") )
         }
-        allRegions.reduce { mergedSpec, currentSpec ->  mergedSpec.merge(currentSpec) }.ResourceTypes
+        allRegions.reduce { mergedSpec, currentSpec ->  mergedSpec and currentSpec }.ResourceTypes
                 .toSortedMap()
                 .forEach{key, value ->
                     println(key)
