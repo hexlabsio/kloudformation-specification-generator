@@ -1,1 +1,1 @@
-# Kloudformation Specification Merger
+# KloudFormation Specification Merger
