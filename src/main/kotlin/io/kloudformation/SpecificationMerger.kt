@@ -3,13 +3,13 @@ package io.kloudformation
 object SpecificationMerger{
     fun merge(specifications: List<Specification>): Specification {
         return specifications.reduce { mergedSpec, currentSpec -> mergedSpec.copy(
-                    PropertyTypes = mergedSpec.PropertyTypes + mergedSpec.PropertyTypes.keys
-                            .filter { currentSpec.PropertyTypes.keys.contains(it) }
-                            .map { it to mergedSpec.PropertyTypes[it]!! }
+                    propertyTypes = mergedSpec.propertyTypes + mergedSpec.propertyTypes.keys
+                            .filter { currentSpec.propertyTypes.keys.contains(it) }
+                            .map { it to mergedSpec.propertyTypes[it]!! }
                             .toMap(),
-                    ResourceTypes = mergedSpec.ResourceTypes + mergedSpec.ResourceTypes.keys
-                            .filter { currentSpec.ResourceTypes.keys.contains(it) }
-                            .map { it to mergedSpec.ResourceTypes[it]!! }
+                    resourceTypes = mergedSpec.resourceTypes + mergedSpec.resourceTypes.keys
+                            .filter { currentSpec.resourceTypes.keys.contains(it) }
+                            .map { it to mergedSpec.resourceTypes[it]!! }
                             .toMap())
         }
     }
