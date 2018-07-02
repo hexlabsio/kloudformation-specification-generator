@@ -1,4 +1,4 @@
-package io.kloudformation
+package io.kloudformation.model
 
 data class Specification(
         val propertyTypes: Map<String, PropertyInfo>,
