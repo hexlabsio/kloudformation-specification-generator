@@ -37,4 +37,38 @@ class SpecificationMergerTest {
         SpecificationPoet.generate(SpecificationMerger.merge(regionSpecifications.map {
         jacksonObjectMapper.readValue<Specification>(this.javaClass.classLoader.getResource("specification/$it.json"))
     }))}
+
+//    @Test
+//    fun model() {
+//        Template(
+//                awsTemplateFormatVersion = "2010-09-09",
+//                description = "Provision and setup PostgreSQL RDS and a Lambda function for initialising the urlcheck database schema",
+//                parameters = mapOf(
+//                        "DBInstanceMasterUsernameParameter" to Parameter(
+//                                type="String",
+//                                default = "username",
+//                                description = "Enter db instance master username. Default is MasterUsername."),
+//                        "DBInstanceMasterPasswordParameter" to Parameter(
+//                                type="String",
+//                                default = "password",
+//                                description = "Enter db instance master password. Default is password."),
+//                        "CommitParameter" to Parameter(
+//                                type = "String",
+//                                description = "Enter commit")),
+//                resources = mapOf(
+//                        "VPC" to VPC(
+//                                cidrBlock = "60.1.0.0/16",
+//                                enableDnsSupport = true,
+//                                enableDnsHostnames = true,
+//                                tags = listOf(Tag("Name", "urlcheck-database-vpc"))),
+//                        "InternetGateway" to InternetGateway(
+//                                tags = listOf(Tag("Name", "urlcheck-database-igw"))),
+//                        "VPCGatewayAttachment" to VPCGatewayAttachment(
+//                                vpcId = "",
+//                                internetGatewayId = null),
+//                        "RouteTable" to RouteTable(vpcId = )
+//                        "Route" to Route(routeTableId = )
+//                )
+//        )
+//    }
 }

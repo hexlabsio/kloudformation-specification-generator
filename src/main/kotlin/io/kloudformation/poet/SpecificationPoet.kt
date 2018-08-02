@@ -3,6 +3,7 @@ package io.kloudformation.poet
 import com.squareup.kotlinpoet.*
 import io.kloudformation.model.Property
 import io.kloudformation.model.PropertyInfo
+import io.kloudformation.model.Resource
 import io.kloudformation.model.Specification
 import java.io.File
 
@@ -18,33 +19,42 @@ object SpecificationPoet {
 
     private fun buildFile(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
             FileSpec.builder(getPackageName(isResource, typeName), getClassName(typeName))
-                    .addType(buildType(types, typeName, propertyInfo))
+                    .addType(buildType(types, isResource, typeName, propertyInfo))
                     .build()
 
-    private fun buildType(types: Set<String>, typeName: String, propertyInfo: PropertyInfo) =
+    private fun buildType(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
             TypeSpec.classBuilder(getClassName(typeName))
                     .addModifiers(if (!propertyInfo.properties.isEmpty()) KModifier.DATA else KModifier.PUBLIC)
-                    .primaryConstructor(if (!propertyInfo.properties.isEmpty()) buildFunction(types, typeName, propertyInfo) else null)
-                    .addProperties(propertyInfo.properties.map { buildProperty(types, typeName, it.key, it.value) })
+                    .primaryConstructor(if (!propertyInfo.properties.isEmpty()) buildFunction(types, isResource, typeName, propertyInfo) else null)
+                    .addSuperinterfaces(if(isResource && !propertyInfo.properties.isEmpty()) listOf(Resource::class.asTypeName()) else emptyList())
+                    .addProperties(if(isResource && !propertyInfo.properties.isEmpty()) listOf(
+                            PropertySpec.builder("logicalName", String::class).initializer("logicalName").build()
+                    ) else emptyList())
+                    .addProperties(propertyInfo.properties.toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap().map { buildProperty(types, typeName, it.key, it.value) })
                     .build()
 
-    private fun buildFunction(types: Set<String>, classTypeName: String, propertyInfo: PropertyInfo) =
+    private fun buildFunction(types: Set<String>, isResource: Boolean, classTypeName: String, propertyInfo: PropertyInfo) =
             FunSpec.constructorBuilder()
-                    .addParameters(propertyInfo.properties.map { buildParameter(types, classTypeName, it.key, it.value) })
+                    .addParameters(if(isResource && !propertyInfo.properties.isEmpty()) listOf(
+                            ParameterSpec.builder("logicalName", String::class).build()
+                    ) else emptyList())
+                    .addParameters(propertyInfo.properties.toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap().map { buildParameter(types, classTypeName, it.key, it.value) })
                     .build()
 
     private fun buildProperty(types: Set<String>, classTypeName: String, propertyName: String, property: Property) =
             PropertySpec.builder(
                     propertyName.decapitalize(),
                     if (property.required) getType(types, classTypeName, property).asNonNullable() else getType(types, classTypeName, property).asNullable())
-                    .addModifiers()
                     .initializer(propertyName.decapitalize())
                     .build()
 
     private fun buildParameter(types: Set<String>, classTypeName: String, parameterName: String, property: Property) =
-            ParameterSpec.builder(
-                    parameterName.decapitalize(),
-                    if (property.required) getType(types, classTypeName, property).asNonNullable() else getType(types, classTypeName, property).asNullable())
+            if (property.required) ParameterSpec
+                    .builder(parameterName.decapitalize(), getType(types, classTypeName, property).asNonNullable())
+                    .build()
+            else ParameterSpec
+                    .builder(parameterName.decapitalize(), getType(types, classTypeName, property).asNullable())
+                    .defaultValue("null")
                     .build()
 
     private fun getClassName(typeName: String) =

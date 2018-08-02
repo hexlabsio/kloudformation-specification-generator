@@ -30,3 +30,5 @@ data class Attribute(
         val primitiveType: String? = null,
         val primitiveItemType: String? = null
 )
+
+interface Resource
