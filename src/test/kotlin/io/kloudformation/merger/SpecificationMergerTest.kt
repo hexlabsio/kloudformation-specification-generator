@@ -52,6 +52,10 @@ class SpecificationMergerTest {
             }
         }
         println(template)
+        //KloudFormationTemplate(
+        // resources=[
+        // Vpc(logicalName=VPC, EnableDnsSupport=ActualValue(value=true)),
+        // Bucket(logicalName=Bucket, bucketName=Join(splitter=, joins=[RefValue(reference=VPC), ActualValue(value=bucket)]), otherString=ActualValue(value=Fred))])
     }
 
     interface Value<T>
