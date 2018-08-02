@@ -3,6 +3,7 @@ package io.kloudformation.merger
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import io.kloudformation.model.Resource
 import io.kloudformation.model.Specification
 import io.kloudformation.poet.SpecificationPoet
 import org.junit.Test
@@ -39,6 +40,7 @@ class SpecificationMergerTest {
         jacksonObjectMapper.readValue<Specification>(this.javaClass.classLoader.getResource("specification/$it.json"))
     }))}
 
+    @Test
     fun go(){
         kloud {
             val vpc = vpc("VPC"){
@@ -48,13 +50,14 @@ class SpecificationMergerTest {
                 bucketName(vpc.reference() + "bucket")
                 otherString("Fred")
             }
+            println(resources) // results in [Vpc(logicalName=VPC, EnableDnsSupport=ActualValue(value=true)), Bucket(logicalName=Bucket, bucketName=Join(splitter=, joins=[RefValue(reference=VPC), ActualValue(value=bucket)]), otherString=ActualValue(value=Fred))]
         }
-
     }
 
-    fun kloud(builder: Builder.() -> Unit) = builder()
+    fun kloud(build: Builder.() -> Unit) = Builder().build()
 
-    class Builder
+    class Builder(val resources: MutableList<Resource> = mutableListOf())
+    fun <T: Resource> Builder.add(resource: T): T = resource.also { this.resources.add(it)  }
     class Template
 
 
@@ -69,7 +72,7 @@ class SpecificationMergerTest {
             override val logicalName: String,
             val bucketName: Value<String>? = null,
             val otherString: Value<String>? = null
-    ): Reffable<String>(logicalName){
+    ): Reffable<String>(logicalName), Resource{
         fun arn() = AttValue<String>(logicalName,"Arn")
         companion object {
             class Builder(private val logicalName: String){
@@ -79,19 +82,19 @@ class SpecificationMergerTest {
                 fun bucketName(bucketName: Value<String>) = also { it.bucketName = bucketName }
                 fun otherString(otherString: String) = also { it.otherString = ActualValue(otherString) }
                 fun otherString(otherString: Value<String>) = also { it.otherString = otherString }
-                fun build() = Bucket(logicalName, bucketName)
+                fun build() = Bucket(logicalName, bucketName,otherString)
             }
             fun create(logicalName: String) = Builder(logicalName)
         }
     }
-    fun Builder.bucket(logicalName: String, builder: Bucket.Companion.Builder.() -> Bucket.Companion.Builder) = builder(Bucket.create(logicalName)).build()
-    fun Builder.vpc(logicalName: String, builder: Vpc.Companion.Builder.() -> Vpc.Companion.Builder) = builder(Vpc.create(logicalName)).build()
+    fun Builder.bucket(logicalName: String, builder: Bucket.Companion.Builder.() -> Bucket.Companion.Builder) = add(builder(Bucket.create(logicalName)).build())
+    fun Builder.vpc(logicalName: String, builder: Vpc.Companion.Builder.() -> Vpc.Companion.Builder)= add(builder(Vpc.create(logicalName)).build())
 
 
     data class Vpc(
             override val logicalName: String,
             val EnableDnsSupport: Value<Boolean>? = null
-    ): Reffable<String>(logicalName){
+    ): Reffable<String>(logicalName), Resource{
         fun cidrBlockAssociations() = AttValue<List<String>>(logicalName, "CidrBlockAssociations")
 
         companion object {
