@@ -1,13 +1,21 @@
 package io.kloudformation.model.extra
 
-import io.kloudformation.model.Resource
+import io.kloudformation.builder.Value
 
-data class Template(
-        val awsTemplateFormatVersion: String?,
-        val description: String?,
-        val parameters: List<Parameter>?,
-        val resources: List<Resource>
-)
+data class KloudFormationTemplate(
+        val awsTemplateFormatVersion: String? = "2010-09-09",
+        val description: String? = "",
+        val parameters: List<Parameter>? = emptyList(),
+        val resources: List<Value.Resource<String>> = emptyList()
+){
+    class Builder(private val resources: MutableList<Value.Resource<String>> = mutableListOf()){
+        fun <T: Value.Resource<String>> add(resource: T): T = resource.also { this.resources.add(it)  }
+        fun build() = KloudFormationTemplate(resources = resources)
+    }
+    companion object {
+        fun create(dsl: Builder.() -> Unit) = Builder().apply(dsl).build()
+    }
+}
 
 data class Parameter(
         val logicalName: String,
