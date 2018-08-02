@@ -6,6 +6,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import io.kloudformation.model.Specification
 import io.kloudformation.poet.SpecificationPoet
 import org.junit.Test
+import kotlin.math.log
 
 class SpecificationMergerTest {
     private val jacksonObjectMapper = jacksonObjectMapper().configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
@@ -37,6 +38,77 @@ class SpecificationMergerTest {
         SpecificationPoet.generate(SpecificationMerger.merge(regionSpecifications.map {
         jacksonObjectMapper.readValue<Specification>(this.javaClass.classLoader.getResource("specification/$it.json"))
     }))}
+
+    fun go(){
+        kloud {
+            val vpc = vpc("VPC"){
+                enableDnsSupport(true)
+            }
+            val bucket = bucket("Bucket"){
+                bucketName(vpc.reference() + "bucket")
+                otherString("Fred")
+            }
+        }
+
+    }
+
+    fun kloud(builder: Builder.() -> Unit) = builder()
+
+    class Builder
+    class Template
+
+
+    interface Value<T>
+    data class ActualValue<T>(val value: T): Value<T>
+    data class RefValue<T>(val reference: String): Value<T>
+    data class AttValue<T>(val reference: String, val attribute: String): Value<T>
+    open class Reffable<T>(open val logicalName: String){
+        fun reference() = RefValue<T>(logicalName)
+    }
+    data class Bucket(
+            override val logicalName: String,
+            val bucketName: Value<String>? = null,
+            val otherString: Value<String>? = null
+    ): Reffable<String>(logicalName){
+        fun arn() = AttValue<String>(logicalName,"Arn")
+        companion object {
+            class Builder(private val logicalName: String){
+                private var bucketName: Value<String>? = null
+                private var otherString: Value<String>? = null
+                fun bucketName(bucketName: String) = also { it.bucketName = ActualValue(bucketName) }
+                fun bucketName(bucketName: Value<String>) = also { it.bucketName = bucketName }
+                fun otherString(otherString: String) = also { it.otherString = ActualValue(otherString) }
+                fun otherString(otherString: Value<String>) = also { it.otherString = otherString }
+                fun build() = Bucket(logicalName, bucketName)
+            }
+            fun create(logicalName: String) = Builder(logicalName)
+        }
+    }
+    fun Builder.bucket(logicalName: String, builder: Bucket.Companion.Builder.() -> Bucket.Companion.Builder) = builder(Bucket.create(logicalName)).build()
+    fun Builder.vpc(logicalName: String, builder: Vpc.Companion.Builder.() -> Vpc.Companion.Builder) = builder(Vpc.create(logicalName)).build()
+
+
+    data class Vpc(
+            override val logicalName: String,
+            val EnableDnsSupport: Value<Boolean>? = null
+    ): Reffable<String>(logicalName){
+        fun cidrBlockAssociations() = AttValue<List<String>>(logicalName, "CidrBlockAssociations")
+
+        companion object {
+            class Builder(private val logicalName: String){
+                private var enableDnsSupport: Value<Boolean>? = null
+                fun enableDnsSupport(enableDnsSupport: Boolean) = also { it.enableDnsSupport = ActualValue(enableDnsSupport) }
+                fun enableDnsSupport(enableDnsSupport: Value<Boolean>) = also { it.enableDnsSupport = enableDnsSupport }
+                fun build() = Vpc(logicalName, enableDnsSupport)
+            }
+            fun create(logicalName: String) = Builder(logicalName)
+        }
+    }
+
+
+    data class Join(val splitter: String, val joins: List<Value<*>>): Value<String>
+
+    operator fun <T> RefValue<T>.plus(other: String) = Join("", listOf(this, ActualValue(other)))
 
 //    @Test
 //    fun model() {
