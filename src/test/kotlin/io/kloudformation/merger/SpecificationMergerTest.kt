@@ -3,9 +3,16 @@ package io.kloudformation.merger
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import io.kloudformation.model.Resource
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.LambdaTypeName
+import com.squareup.kotlinpoet.asTypeName
+import io.kloudformation.builder.Value
 import io.kloudformation.model.Specification
+import io.kloudformation.model.extra.KloudFormationTemplate
 import io.kloudformation.poet.SpecificationPoet
+import io.kloudformation.resource.ec2.vPC
+import io.kloudformation.resource.s3.bucket
 import org.junit.Test
 import kotlin.math.log
 
@@ -31,95 +38,33 @@ class SpecificationMergerTest {
     @Test
     fun test() {
         SpecificationMerger.merge(regionSpecifications.map {
-        jacksonObjectMapper.readValue<Specification>(this.javaClass.classLoader.getResource("specification/$it.json"))
-    })}
+            jacksonObjectMapper.readValue<Specification>(this.javaClass.classLoader.getResource("specification/$it.json"))
+        })
+    }
 
     @Test
     fun generate() {
         SpecificationPoet.generate(SpecificationMerger.merge(regionSpecifications.map {
-        jacksonObjectMapper.readValue<Specification>(this.javaClass.classLoader.getResource("specification/$it.json"))
-    }))}
+            jacksonObjectMapper.readValue<Specification>(this.javaClass.classLoader.getResource("specification/$it.json"))
+        }))
+    }
 
     @Test
-    fun go(){
+    fun go() {
+
         val template = KloudFormationTemplate.create {
-            val vpc = vpc("VPC"){
-                enableDnsSupport(true)
+            val vpc = vPC("VPC") {
+                cidrBlock("0.0.0.0/0")
+                enableDnsHostnames(true)
             }
-            bucket("Bucket"){
-                bucketName(vpc.reference() + "bucket")
-                otherString("Fred")
+            bucket("Bucket") {
+                bucketName(vpc + "vpcBucket")
             }
         }
         println(template)
-        //KloudFormationTemplate(
-        // resources=[
-        // Vpc(logicalName=VPC, EnableDnsSupport=ActualValue(value=true)),
-        // Bucket(logicalName=Bucket, bucketName=Join(splitter=, joins=[RefValue(reference=VPC), ActualValue(value=bucket)]), otherString=ActualValue(value=Fred))])
+
     }
-
-    interface Value<T>
-    data class ActualValue<T>(val value: T): Value<T>
-    data class RefValue<T>(val reference: String): Value<T>
-    data class AttValue<T>(val reference: String, val attribute: String): Value<T>
-    open class Reffable<T>(open val logicalName: String){
-        fun reference() = RefValue<T>(logicalName)
-    }
-    data class Join(val splitter: String, val joins: List<Value<*>>): Value<String>
-    operator fun <T> RefValue<T>.plus(other: String) = Join("", listOf(this, ActualValue(other)))
-
-    data class KloudFormationTemplate(val resources: List<Resource>){
-        class Builder(private val resources: MutableList<Resource> = mutableListOf()){
-            fun <T: Resource> add(resource: T): T = resource.also { this.resources.add(it)  }
-            fun build() = KloudFormationTemplate(resources)
-        }
-        companion object {
-            fun create(dsl: Builder.() -> Unit) = Builder().apply(dsl).build()
-        }
-    }
-
-    data class Bucket(
-            override val logicalName: String,
-            val bucketName: Value<String>? = null,
-            val otherString: Value<String>? = null
-    ): Reffable<String>(logicalName), Resource{
-        fun arn() = AttValue<String>(logicalName,"Arn")
-        companion object {
-            class Builder(private val logicalName: String){
-                private var bucketName: Value<String>? = null
-                private var otherString: Value<String>? = null
-                fun bucketName(bucketName: String) = also { it.bucketName = ActualValue(bucketName) }
-                fun bucketName(bucketName: Value<String>) = also { it.bucketName = bucketName }
-                fun otherString(otherString: String) = also { it.otherString = ActualValue(otherString) }
-                fun otherString(otherString: Value<String>) = also { it.otherString = otherString }
-                fun build() = Bucket(logicalName, bucketName,otherString)
-            }
-            fun create(logicalName: String) = Builder(logicalName)
-        }
-    }
-    fun KloudFormationTemplate.Builder.bucket(logicalName: String, builder: Bucket.Companion.Builder.() -> Bucket.Companion.Builder) = add(builder(Bucket.create(logicalName)).build())
-    fun KloudFormationTemplate.Builder.vpc(logicalName: String, builder: Vpc.Companion.Builder.() -> Vpc.Companion.Builder)= add(builder(Vpc.create(logicalName)).build())
-
-
-    data class Vpc(
-            override val logicalName: String,
-            val EnableDnsSupport: Value<Boolean>? = null
-    ): Reffable<String>(logicalName), Resource{
-        fun cidrBlockAssociations() = AttValue<List<String>>(logicalName, "CidrBlockAssociations")
-
-        companion object {
-            class Builder(private val logicalName: String){
-                private var enableDnsSupport: Value<Boolean>? = null
-                fun enableDnsSupport(enableDnsSupport: Boolean) = also { it.enableDnsSupport = ActualValue(enableDnsSupport) }
-                fun enableDnsSupport(enableDnsSupport: Value<Boolean>) = also { it.enableDnsSupport = enableDnsSupport }
-                fun build() = Vpc(logicalName, enableDnsSupport)
-            }
-            fun create(logicalName: String) = Builder(logicalName)
-        }
-    }
-
-
-
+}
 
 //    @Test
 //    fun model() {
@@ -154,4 +99,4 @@ class SpecificationMergerTest {
 //                )
 //        )
 //    }
-}
+//}
