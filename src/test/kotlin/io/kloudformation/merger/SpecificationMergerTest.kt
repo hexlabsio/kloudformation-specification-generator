@@ -42,24 +42,17 @@ class SpecificationMergerTest {
 
     @Test
     fun go(){
-        kloud {
+        val template = KloudFormationTemplate.create {
             val vpc = vpc("VPC"){
                 enableDnsSupport(true)
             }
-            val bucket = bucket("Bucket"){
+            bucket("Bucket"){
                 bucketName(vpc.reference() + "bucket")
                 otherString("Fred")
             }
-            println(resources) // results in [Vpc(logicalName=VPC, EnableDnsSupport=ActualValue(value=true)), Bucket(logicalName=Bucket, bucketName=Join(splitter=, joins=[RefValue(reference=VPC), ActualValue(value=bucket)]), otherString=ActualValue(value=Fred))]
         }
+        println(template)
     }
-
-    fun kloud(build: Builder.() -> Unit) = Builder().build()
-
-    class Builder(val resources: MutableList<Resource> = mutableListOf())
-    fun <T: Resource> Builder.add(resource: T): T = resource.also { this.resources.add(it)  }
-    class Template
-
 
     interface Value<T>
     data class ActualValue<T>(val value: T): Value<T>
@@ -68,6 +61,19 @@ class SpecificationMergerTest {
     open class Reffable<T>(open val logicalName: String){
         fun reference() = RefValue<T>(logicalName)
     }
+    data class Join(val splitter: String, val joins: List<Value<*>>): Value<String>
+    operator fun <T> RefValue<T>.plus(other: String) = Join("", listOf(this, ActualValue(other)))
+
+    data class KloudFormationTemplate(val resources: List<Resource>){
+        class Builder(private val resources: MutableList<Resource> = mutableListOf()){
+            fun <T: Resource> add(resource: T): T = resource.also { this.resources.add(it)  }
+            fun build() = KloudFormationTemplate(resources)
+        }
+        companion object {
+            fun create(dsl: Builder.() -> Unit) = Builder().apply(dsl).build()
+        }
+    }
+
     data class Bucket(
             override val logicalName: String,
             val bucketName: Value<String>? = null,
@@ -87,8 +93,8 @@ class SpecificationMergerTest {
             fun create(logicalName: String) = Builder(logicalName)
         }
     }
-    fun Builder.bucket(logicalName: String, builder: Bucket.Companion.Builder.() -> Bucket.Companion.Builder) = add(builder(Bucket.create(logicalName)).build())
-    fun Builder.vpc(logicalName: String, builder: Vpc.Companion.Builder.() -> Vpc.Companion.Builder)= add(builder(Vpc.create(logicalName)).build())
+    fun KloudFormationTemplate.Builder.bucket(logicalName: String, builder: Bucket.Companion.Builder.() -> Bucket.Companion.Builder) = add(builder(Bucket.create(logicalName)).build())
+    fun KloudFormationTemplate.Builder.vpc(logicalName: String, builder: Vpc.Companion.Builder.() -> Vpc.Companion.Builder)= add(builder(Vpc.create(logicalName)).build())
 
 
     data class Vpc(
@@ -109,9 +115,7 @@ class SpecificationMergerTest {
     }
 
 
-    data class Join(val splitter: String, val joins: List<Value<*>>): Value<String>
 
-    operator fun <T> RefValue<T>.plus(other: String) = Join("", listOf(this, ActualValue(other)))
 
 //    @Test
 //    fun model() {
