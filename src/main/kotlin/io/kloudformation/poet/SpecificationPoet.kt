@@ -6,6 +6,7 @@ import io.kloudformation.model.Attribute
 import io.kloudformation.model.Property
 import io.kloudformation.model.PropertyInfo
 import io.kloudformation.model.Specification
+import io.kloudformation.model.extra.KloudFormationTemplate
 import java.io.File
 
 object SpecificationPoet {
@@ -24,53 +25,64 @@ object SpecificationPoet {
     private fun buildFile(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
             FileSpec.builder(getPackageName(isResource, typeName), getClassName(typeName))
                     .addType(buildType(types, isResource, typeName, propertyInfo))
-                    .also {
-                        if(isResource && !propertyInfo.properties.isEmpty()){
-                            it.addFunction(extensionFunctionFor(getClassName(typeName)))
-                        }
-                    }
+                    .addFunction(builderFunction(getClassName(typeName), isResource, noArgs = false))
+                    .addFunction(builderFunction(getClassName(typeName), isResource, noArgs = true))
                     .build()
 
+    private fun builderClassNameFrom(type: String) = ClassName.bestGuess("$type.Companion.Builder")
 
-    private fun extensionFunctionFor(name: String) = FunSpec.builder("io.kloudformation.model.extra.KloudFormationTemplate.Builder.${name.decapitalize()}")
-            .addParameter(logicalName, String::class)
-            .addParameter("builder",LambdaTypeName.get(ClassName.bestGuess("$name.Companion.Builder"), returnType = ClassName.bestGuess("$name.Companion.Builder")))
-            .addCode("return add(builder($name.create($logicalName)).build())\n")
-            .build()
+    private fun builderFunction(name: String, isResource: Boolean, noArgs: Boolean) = FunSpec.builder(name.decapitalize()).also {
+            if (isResource) {
+                it.addParameter(logicalName, String::class)
+                it.addCode( if(noArgs) "return ${name.decapitalize()}($logicalName){ this }\n" else "return add( builder( $name.create($logicalName) ).build() )\n" )
+            } else {
+                it.addCode( if(noArgs) "return ${name.decapitalize()}{ this }\n" else "return builder( $name.create() ).build()\n" )
+            }
+            if (!noArgs) it.addParameter("builder", LambdaTypeName.get(builderClassNameFrom(name), returnType = builderClassNameFrom(name)))
+        }
+        .receiver(KloudFormationTemplate.Builder::class)
+        .build()
 
     private fun buildType(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
             TypeSpec.classBuilder(getClassName(typeName))
-                    .addModifiers(if (!propertyInfo.properties.isEmpty()) KModifier.DATA else KModifier.PUBLIC)
-                    .primaryConstructor(if (!propertyInfo.properties.isEmpty()) buildFunction(types, isResource, typeName, propertyInfo) else null)
+                    .addModifiers(if (!propertyInfo.properties.isEmpty() || isResource) KModifier.DATA else KModifier.PUBLIC)
+                    .primaryConstructor(if (!propertyInfo.properties.isEmpty() || isResource) buildFunction(types, isResource, typeName, propertyInfo) else null)
                     .also {
-                        if(isResource && !propertyInfo.properties.isEmpty())
+                        if(isResource)
                             it
                             .superclass(ParameterizedTypeName.get(Value.Resource::class.asClassName(),String::class.asTypeName()))
                             .addSuperclassConstructorParameter(logicalName)
                             .addProperties(listOf(PropertySpec.builder(logicalName, String::class).initializer(logicalName).build()))
-                            .addFunctions(functionsFrom(propertyInfo.attributes.orEmpty()))
-                            .companionObject(companionFor(types, typeName, propertyInfo))
                     }
-                    .addProperties(propertyInfo.properties.toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap().map { buildProperty(types, typeName, it.key, it.value) })
+                    .addFunctions(functionsFrom(propertyInfo.attributes.orEmpty()))
+                    .companionObject(builderClass(types, isResource, typeName, propertyInfo))
+                    .addProperties(propertyInfo.properties.sorted().map { buildProperty(types, typeName, it.key, it.value) })
                     .build()
 
     private fun functionsFrom(attributes: Map<String, Attribute>) = attributes.map {
         FunSpec.builder(escape(it.key)).addCode("return %T<%T>(logicalName, %S)\n", Value.Att::class, String::class, it.key).build() //todo replace string type here with specific attribute type
     }
 
-    private fun companionFor(types: Set<String>, typeName: String, propertyInfo: PropertyInfo) = TypeSpec.companionObjectBuilder()
+    private fun Map<String, Property>.sorted() = toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap()
+
+    private fun builderClass(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) = TypeSpec.companionObjectBuilder()
             .addType(
                     TypeSpec.classBuilder("Builder")
-                            .primaryConstructor(FunSpec.constructorBuilder().addParameter(ParameterSpec.builder(logicalName, String::class).build()).build())
-                            .addProperty(PropertySpec.builder(logicalName, String::class).initializer(logicalName).build())
-                            .addProperties(propertyInfo.properties.toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap().map { buildVarProperty(types, typeName, it.key, it.value) })
+                            .also {
+                                if(isResource){
+                                    it.primaryConstructor(FunSpec.constructorBuilder().addParameter(ParameterSpec.builder(logicalName, String::class).build()).build())
+                                    it.addProperty(PropertySpec.builder(logicalName, String::class).initializer(logicalName).build())
+                                }
+                            }
+                            .addProperties(propertyInfo.properties.sorted().map { buildVarProperty(types, typeName, it.key, it.value) })
                             .addFunctions(
-                                    propertyInfo.properties.flatMap { //TODO account for lists and maps
+                                    propertyInfo.properties.flatMap {
                                         listOfNotNull(
-                                                if(it.value.primitiveType != null ) FunSpec.builder(it.key.decapitalize())
-                                                        .addParameter(it.key.decapitalize(), getType(types, typeName, it.value, false))
-                                                        .addCode("return also { it.${it.key.decapitalize()} = %T(${it.key.decapitalize()}) }\n", Value.Of::class)
-                                                        .build()
+                                                if(it.value.itemType == null && (it.value.primitiveType != null || it.value.primitiveItemType != null))
+                                                    primitiveSetterFunction(it.key.decapitalize(), it.value, getType(types, typeName, it.value, wrapped = false))
+                                                else null,
+                                                if(it.value.primitiveType == null && it.value.primitiveItemType == null && it.value.itemType == null && it.value.type != null)
+                                                    typeSetterFunction(it.key.decapitalize(), it.value.type!!)
                                                 else null,
                                                 FunSpec.builder(it.key.decapitalize())
                                                         .addParameter(it.key.decapitalize(), getType(types, typeName, it.value))
@@ -81,8 +93,8 @@ object SpecificationPoet {
                                             FunSpec.builder("build")
                                                     .also {
                                                         val primitiveProperties = propertyInfo.properties.toList()
-                                                        it.addCode("return ${getClassName(typeName)}( " + primitiveProperties.fold(logicalName) {
-                                                            acc, item ->  acc + ", ${item.first.decapitalize()} = ${item.first.decapitalize()}" + (if(item.second.required)"!!" else "")
+                                                        it.addCode("return ${getClassName(typeName)}( " + primitiveProperties.foldIndexed(if(isResource)logicalName + (if(primitiveProperties.isNotEmpty()) ", " else "") else "") {
+                                                            index, acc, item ->  acc + (if(index != 0)", " else "") + "${item.first.decapitalize()} = ${item.first.decapitalize()}" + (if(item.second.required)"!!" else "")
                                                         } + ")\n")
                                                     }
                                                     .build()
@@ -90,11 +102,26 @@ object SpecificationPoet {
                             )
                             .build()
             ).addFunction(
-                FunSpec.builder("create")
-                        .addParameter(logicalName, String::class)
-                        .addCode("return Builder($logicalName)\n")
-                        .build()
+                if(isResource) FunSpec.builder("create").addParameter(logicalName, String::class).addCode("return Builder($logicalName)\n").build()
+                else  FunSpec.builder("create").addCode("return Builder()\n").build()
             )
+            .build()
+
+    private fun primitiveSetterFunction(name: String, property: Property, type: TypeName) = FunSpec.builder(name + if(property.type == "Map") "Map" else "")
+            .addParameter(name, type)
+            .also {
+                if(property.primitiveItemType != null){
+                    if(property.type == "Map") it.addCode("return also { it.$name = $name.orEmpty().map { it.key to %T(it.value) }.toMap() }\n", Value.Of::class)
+                    else it.addCode("return also { it.$name = $name.orEmpty().map { %T(it) }.toTypedArray() }\n", Value.Of::class)
+                }
+                else if(property.primitiveType != null){
+                    it.addCode("return also { it.$name = %T($name) }\n", Value.Of::class)
+                }
+            }
+            .build()
+
+    private fun typeSetterFunction(name: String, type: String) = FunSpec.builder("_" + name)
+            .addCode("return \"\"\nfun $name( builder: $type.Companion.Builder.() -> $type.Companion.Builder ) = $name($type.create().builder().build())")
             .build()
 
     private fun buildFunction(types: Set<String>, isResource: Boolean, classTypeName: String, propertyInfo: PropertyInfo) =
