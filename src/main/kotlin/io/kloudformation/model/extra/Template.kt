@@ -7,11 +7,6 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedMethod
 import io.kloudformation.builder.KloudResource
 import io.kloudformation.builder.Value
 
-class KloudFormationPropertyNamingStrategy : PropertyNamingStrategy() {
-    override fun nameForGetterMethod(config: MapperConfig<*>?, method: AnnotatedMethod?, defaultName: String?) =
-            if(defaultName == "awsTemplateFormatVersion") "AWSTemplateFormatVersion"
-            else defaultName!!.capitalize()
-}
 
 data class KloudFormationTemplate(
         val awsTemplateFormatVersion: String? = "2010-09-09",
@@ -47,6 +42,12 @@ data class KloudFormationTemplate(
     companion object {
         fun create(dsl: Builder.() -> Unit) = Builder().apply(dsl).build()
     }
+}
+
+class KloudFormationPropertyNamingStrategy : PropertyNamingStrategy() {
+    override fun nameForGetterMethod(config: MapperConfig<*>?, method: AnnotatedMethod?, defaultName: String?) =
+            if(defaultName == "awsTemplateFormatVersion") "AWSTemplateFormatVersion"
+            else defaultName!!.capitalize()
 }
 
 data class Parameter<T>(

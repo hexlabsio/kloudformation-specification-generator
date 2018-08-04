@@ -1,7 +1,5 @@
 package io.kloudformation.model
 
-import io.kloudformation.builder.Value
-
 data class Specification(
         val propertyTypes: Map<String, PropertyInfo>,
         val resourceTypes: Map<String, PropertyInfo>,
