@@ -46,13 +46,17 @@ object SpecificationPoet {
     private fun buildType(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
             TypeSpec.classBuilder(getClassName(typeName))
                     .addModifiers(if (!propertyInfo.properties.isEmpty() || isResource) KModifier.DATA else KModifier.PUBLIC)
-                    .primaryConstructor(if (!propertyInfo.properties.isEmpty() || isResource) buildFunction(types, isResource, typeName, propertyInfo) else null)
+                    .primaryConstructor(if (!propertyInfo.properties.isEmpty() || isResource) buildConstructor(types, isResource, typeName, propertyInfo) else null)
                     .also {
                         if(isResource)
                             it
                             .superclass(ParameterizedTypeName.get(Value.Resource::class.asClassName(),String::class.asTypeName()))
                             .addSuperclassConstructorParameter(logicalName)
-                            .addProperties(listOf(PropertySpec.builder(logicalName, String::class).initializer(logicalName).build()))
+                            .addProperties(listOf(
+                                        PropertySpec.builder(logicalName, String::class).initializer(logicalName).build(),
+                                        PropertySpec.builder("type", String::class).initializer("%S", typeName).build()
+                                    )
+                            )
                     }
                     .addFunctions(functionsFrom(propertyInfo.attributes.orEmpty()))
                     .companionObject(builderClass(types, isResource, typeName, propertyInfo))
@@ -124,9 +128,9 @@ object SpecificationPoet {
             .addCode("return \"\"\nfun $name( builder: $type.Companion.Builder.() -> $type.Companion.Builder ) = $name($type.create().builder().build())")
             .build()
 
-    private fun buildFunction(types: Set<String>, isResource: Boolean, classTypeName: String, propertyInfo: PropertyInfo) =
+    private fun buildConstructor(types: Set<String>, isResource: Boolean, classTypeName: String, propertyInfo: PropertyInfo) =
             FunSpec.constructorBuilder()
-                    .addParameters(if(isResource && !propertyInfo.properties.isEmpty()) listOf(
+                    .addParameters(if(isResource) listOf(
                             ParameterSpec.builder(logicalName, String::class).build()
                     ) else emptyList())
                     .addParameters(propertyInfo.properties.toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap().map { buildParameter(types, classTypeName, it.key, it.value) })
@@ -138,7 +142,7 @@ object SpecificationPoet {
                     if (property.required) getType(types, classTypeName, property).asNonNullable() else getType(types, classTypeName, property).asNullable())
                     .initializer(propertyName.decapitalize())
                     .build()
-    //TODO copy paste
+
     private fun buildVarProperty(types: Set<String>, classTypeName: String, propertyName: String, property: Property) =
             PropertySpec.varBuilder(
                     propertyName.decapitalize(),
@@ -160,13 +164,23 @@ object SpecificationPoet {
     private fun getPackageName(isResource: Boolean, typeName: String) =
             "io.kloudformation.${if (isResource) "resource" else "property"}${typeName.split("::", ".").dropLast(1).joinToString(".").toLowerCase().replaceFirst("aws.", ".")}"
 
+
+    private fun primitiveTypeName(primitiveType: String) = ClassName.bestGuess(primitiveType.replace("Json", "com.fasterxml.jackson.databind.JsonNode").replace("Timestamp", "java.time.Instant").replace("Integer", "kotlin.Int"))
+
+    private fun valueTypeName(primitiveType: String, wrapped: Boolean) = if(wrapped) ParameterizedTypeName.get(Value::class.asClassName(), primitiveTypeName(primitiveType))
+    else primitiveTypeName(primitiveType)
+
     private fun getType(types: Set<String>, classTypeName: String, property: Property, wrapped: Boolean = true) = when {
         !property.primitiveType.isNullOrEmpty() -> {
-            val className = ClassName.bestGuess(property.primitiveType.toString().replace("Json", "com.fasterxml.jackson.databind.JsonNode").replace("Timestamp", "java.time.Instant").replace("Integer", "kotlin.Int"))
-            if(wrapped)ParameterizedTypeName.get(Value::class.asClassName(), className) else className
+            if(wrapped)ParameterizedTypeName.get(Value::class.asClassName(), primitiveTypeName(property.primitiveType!!))
+            else primitiveTypeName(property.primitiveType!!)
         }
-        !property.primitiveItemType.isNullOrEmpty() -> if (property.type.equals("Map")) ParameterizedTypeName.get(Map::class.asClassName(), String::class.asClassName(), ClassName.bestGuess(property.primitiveItemType.toString())) else ParameterizedTypeName.get(List::class, String::class)
-        !property.itemType.isNullOrEmpty() -> ParameterizedTypeName.get(List::class.asClassName(), ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, property.itemType.toString())) + "." + property.itemType))
+        !property.primitiveItemType.isNullOrEmpty() -> {
+            if (property.type.equals("Map"))
+                ParameterizedTypeName.get(Map::class.asClassName(), String::class.asClassName(), valueTypeName(property.primitiveItemType!!, wrapped))
+            else ParameterizedTypeName.get(ClassName.bestGuess("Array"), valueTypeName(property.primitiveItemType!!, wrapped))
+        }
+        !property.itemType.isNullOrEmpty() -> ParameterizedTypeName.get(ClassName.bestGuess("Array"), ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, property.itemType.toString())) + "." + property.itemType))
         else -> ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, property.type.toString())) + "." + property.type)
     }
 
