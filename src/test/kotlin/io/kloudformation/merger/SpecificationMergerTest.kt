@@ -3,18 +3,13 @@ package io.kloudformation.merger
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.LambdaTypeName
-import com.squareup.kotlinpoet.asTypeName
-import io.kloudformation.builder.Value
 import io.kloudformation.model.Specification
 import io.kloudformation.model.extra.KloudFormationTemplate
 import io.kloudformation.poet.SpecificationPoet
+import io.kloudformation.property.s3.bucket.serverSideEncryptionRule
 import io.kloudformation.resource.ec2.vPC
 import io.kloudformation.resource.s3.bucket
 import org.junit.Test
-import kotlin.math.log
 
 class SpecificationMergerTest {
     private val jacksonObjectMapper = jacksonObjectMapper().configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
@@ -59,6 +54,14 @@ class SpecificationMergerTest {
             }
             bucket("Bucket") {
                 bucketName(vpc + "vpcBucket")
+                bucketEncryption {
+                    serverSideEncryptionConfiguration(
+                        arrayOf(
+                                serverSideEncryptionRule { serverSideEncryptionByDefault { sSEAlgorithm("Fred") } },
+                                serverSideEncryptionRule { serverSideEncryptionByDefault { sSEAlgorithm(vpc) } }
+                        )
+                    )
+                }
             }
         }
         println(template)
