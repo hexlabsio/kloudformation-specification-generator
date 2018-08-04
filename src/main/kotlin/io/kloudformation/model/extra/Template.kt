@@ -11,6 +11,8 @@ data class KloudFormationTemplate(
     class Builder(private val resources: MutableList<Value.Resource<String>> = mutableListOf()){
         fun <T: Value.Resource<String>> add(resource: T): T = resource.also { this.resources.add(it)  }
         fun build() = KloudFormationTemplate(resources = resources)
+
+        operator fun <T> T.unaryPlus() = Value.Of(this)
     }
     companion object {
         fun create(dsl: Builder.() -> Unit) = Builder().apply(dsl).build()
