@@ -1,18 +1,33 @@
 package io.kloudformation.merger
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.MapperFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.PropertyNamingStrategy
+import com.fasterxml.jackson.databind.cfg.MapperConfig
+import com.fasterxml.jackson.databind.introspect.AnnotatedField
+import com.fasterxml.jackson.databind.introspect.AnnotatedMethod
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.kloudformation.builder.Value
 import io.kloudformation.model.Specification
+import io.kloudformation.model.extra.KloudFormationPropertyNamingStrategy
 import io.kloudformation.model.extra.KloudFormationTemplate
+import io.kloudformation.model.extra.Parameter
 import io.kloudformation.poet.SpecificationPoet
 import io.kloudformation.property.s3.bucket.serverSideEncryptionRule
 import io.kloudformation.resource.ec2.vPC
+import io.kloudformation.resource.iot.policy
 import io.kloudformation.resource.s3.bucket
-//import io.kloudformation.property.s3.bucket.serverSideEncryptionRule
-//import io.kloudformation.resource.ec2.vPC
-//import io.kloudformation.resource.s3.bucket
+import io.kloudformation.resource.sns.subscription
+import io.kloudformation.resource.sns.topic
+import io.kloudformation.resource.sns.topicPolicy
+import io.kloudformation.property.s3.bucket.serverSideEncryptionRule
+import io.kloudformation.resource.ec2.vPC
+import io.kloudformation.resource.s3.bucket
+import io.kloudformation.resource.sqs.queue
 import org.junit.Test
 
 class SpecificationMergerTest {
@@ -51,85 +66,47 @@ class SpecificationMergerTest {
 
     @Test
     fun go() {
-
         val template = KloudFormationTemplate.create {
-            val vpc = vPC(logicalName = "VPC", cidrBlock = +"0.0.0.0/0") {
-                enableDnsHostnames(true)
-            }
-            vPC("VPC2", cidrBlock = +"0.0.0.0/0")
-            bucket("Bucket") {
-                bucketName(vpc + "vpcBucket")
-                bucketEncryption(
-                        arrayOf(
-                                serverSideEncryptionRule {
-                                    serverSideEncryptionByDefault(sSEAlgorithm = +"")
-                                }
-                        )
-                )
+            val quadTopic = topic("QuadNotificationTopic")
+            val quadNotificationEndpoint = parameter<String>("QuadNotificationEndpoint", "AWS::EC2::Instance::Id")
+            subscription("QuadNotificationSubscription") {
+                topicArn(quadTopic.ref())
+                protocol("email")
+                endpoint(quadNotificationEndpoint + quadTopic.TopicName())
             }
         }
-        println(template)
 
-        //Results in ************************************************************************
-//        KloudFormationTemplate(
-//            awsTemplateFormatVersion=2010-09-09,
-//            description=,
-//            parameters=[],
-//            resources=[
-//                VPC(
-//                    logicalName=VPC,
-//                    cidrBlock=Of(value=0.0.0.0/0),
-//                    enableDnsHostnames=Of(value=true),
-//                    enableDnsSupport=null,
-//                    instanceTenancy=null,
-//                    tags=null
-//                ),
-//                VPC(
-//                    logicalName=VPC2,
-//                    cidrBlock=Of(value=0.0.0.0/0),
-//                    enableDnsHostnames=null,
-//                    enableDnsSupport=null,
-//                    instanceTenancy=null,
-//                    tags=null
-//                ),
-//                Bucket(
-//                    logicalName=Bucket,
-//                    accelerateConfiguration=null,
-//                    accessControl=null,
-//                    analyticsConfigurations=null,
-//                    bucketEncryption=BucketEncryption(
-//                        serverSideEncryptionConfiguration=[
-//                            ServerSideEncryptionRule(
-//                                serverSideEncryptionByDefault=ServerSideEncryptionByDefault(
-//                                    sSEAlgorithm=Of(value=),
-//                                    kMSMasterKeyID=null
-//                                )
-//                            )
-//                        ]
-//                    ),
-//                    bucketName=Join(
-//                        splitter=,
-//                        joins=[
-//                            VPC(logicalName=VPC, cidrBlock=Of(value=0.0.0.0/0), enableDnsHostnames=Of(value=true), enableDnsSupport=null, instanceTenancy=null, tags=null),
-//                            Of(value=vpcBucket)
-//                        ]
-//                    ),
-//                    corsConfiguration=null,
-//                    inventoryConfigurations=null,
-//                    lifecycleConfiguration=null,
-//                    loggingConfiguration=null,
-//                    metricsConfigurations=null,
-//                    notificationConfiguration=null,
-//                    replicationConfiguration=null,
-//                    tags=null,
-//                    versioningConfiguration=null,
-//                    websiteConfiguration=null
-//                )
-//            ]
-//        )
-
-
+        println(ObjectMapper(YAMLFactory())
+                .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+                .setPropertyNamingStrategy(KloudFormationPropertyNamingStrategy())
+                .writerWithDefaultPrettyPrinter()
+                .writeValueAsString(template)
+        )
     }
+
+    //Results in ************************************************************************
+//    ---
+//    AWSTemplateFormatVersion: "2010-09-09"
+//    Description: ""
+//    Parameters:
+//    QuadNotificationEndpoint:
+//    Type: "AWS::EC2::Instance::Id"
+//    Resources:
+//    QuadNotificationTopic:
+//    Type: "AWS::SNS::Topic"
+//    QuadNotificationSubscription:
+//    Type: "AWS::SNS::Subscription"
+//    Endpoint:
+//    Fn::Join:
+//    - ""
+//    - - Ref: "QuadNotificationEndpoint"
+//    - Fn::GetAtt:
+//    - "QuadNotificationTopic"
+//    - "TopicName"
+//    Protocol: "email"
+//    TopicArn:
+//    Ref: "QuadNotificationTopic"
+
 }
 
 //    @Test

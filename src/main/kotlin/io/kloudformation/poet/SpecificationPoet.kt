@@ -1,30 +1,38 @@
 package io.kloudformation.poet
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.squareup.kotlinpoet.*
+import io.kloudformation.builder.KloudResource
 import io.kloudformation.builder.Value
 import io.kloudformation.model.Attribute
 import io.kloudformation.model.Property
 import io.kloudformation.model.PropertyInfo
 import io.kloudformation.model.Specification
 import io.kloudformation.model.extra.KloudFormationTemplate
-import io.kloudformation.poet.SpecificationPoet.sorted
 import java.io.File
-import java.lang.reflect.Type
 
 object SpecificationPoet {
 
     val logicalName = "logicalName"
 
+    private data class TypeInfo(val awsTypeName: String, val canonicalName: String, val  properties: List<PropertyTypeInfo>)
+    private data class PropertyTypeInfo(val name: String, val typeName: TypeName)
+
     fun generate(specification: Specification){
-        val propeties = mutableListOf<Any>()
         val files = (specification.propertyTypes
                 .map { it.key to buildFile((specification.propertyTypes + specification.resourceTypes).keys, false, it.key, it.value) } +
         specification.resourceTypes
                 .map { it.key to buildFile((specification.propertyTypes + specification.resourceTypes).keys, true, it.key, it.value) }).toMap()
 
-        val fieldMappings = files.map { Triple(it.key, it.value.packageName + "." + (it.value.members.first { it is TypeSpec } as TypeSpec).name, (it.value.members.first { it is TypeSpec } as TypeSpec).propertySpecs.map { it.name to it.type }) }
-        //println(requiredFieldMappings)
-       // files.forEach { it.writeTo(File(System.getProperty("user.dir") + "/target/generated-sources")) }
+        val fieldMappings = files.map {
+            TypeInfo(
+                    awsTypeName = it.key,
+                    canonicalName = it.value.packageName + "." + (it.value.members.first { it is TypeSpec } as TypeSpec).name,
+                    properties = (it.value.members.first { it is TypeSpec } as TypeSpec).propertySpecs.map {
+                        PropertyTypeInfo(it.name,it.type)
+                    }
+            )
+        }
         files.map { file ->
             val type = file.value.members.first{ it is TypeSpec } as TypeSpec
             val propertyType = file.key
@@ -34,19 +42,13 @@ object SpecificationPoet {
                     .also { newFile ->
                         file.value.members.filter { it is FunSpec }.map { it as FunSpec }.forEach{ newFile.addFunction(it) }
                     }
-                    .addType(
-                            type.toBuilder().primaryConstructor(type.primaryConstructor).companionObject(builderClass((specification.propertyTypes + specification.resourceTypes).keys, isResource, propertyType, propertyInfo!!, fieldMappings)).build()
-                    )
+                    .addType(type.toBuilder().primaryConstructor(type.primaryConstructor).companionObject(builderClass((specification.propertyTypes + specification.resourceTypes).keys, isResource, propertyType, propertyInfo!!, fieldMappings)).build())
                     .build()
-        }
-
-                //.companionObject(builderClass(types, isResource, typeName, propertyInfo))
-                .forEach { it.writeTo(File(System.getProperty("user.dir") + "/target/generated-sources")) }
+        }.forEach { it.writeTo(File(System.getProperty("user.dir") + "/target/generated-sources")) }
     }
 
     private fun buildFile(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
             FileSpec.builder(getPackageName(isResource, typeName), getClassName(typeName))
-                    //.addComment(typeName)
                     .addType(buildType(types, isResource, typeName, propertyInfo))
                     .addFunction(builderFunction(types, isResource, typeName, propertyInfo))
                     .build()
@@ -77,21 +79,20 @@ object SpecificationPoet {
                     .also {
                         if(isResource)
                             it
-                            .superclass(ParameterizedTypeName.get(Value.Resource::class.asClassName(),String::class.asTypeName()))
+                            .superclass(ParameterizedTypeName.get(KloudResource::class.asClassName(),String::class.asTypeName()))
                             .addSuperclassConstructorParameter(logicalName)
                             .addProperties(listOf(
-                                        PropertySpec.builder(logicalName, String::class).initializer(logicalName).build(),
+                                        PropertySpec.builder(logicalName, String::class).initializer(logicalName).addModifiers(KModifier.OVERRIDE).addAnnotation(JsonIgnore::class).build(),
                                         PropertySpec.builder("type", String::class).initializer("%S", typeName).build()
                                     )
                             )
                     }
                     .addFunctions(functionsFrom(propertyInfo.attributes.orEmpty()))
-                    //.companionObject(builderClass(types, isResource, typeName, propertyInfo))
                     .addProperties(propertyInfo.properties.sorted().map { buildProperty(types, typeName, it.key, it.value) })
                     .build()
 
     private fun functionsFrom(attributes: Map<String, Attribute>) = attributes.map {
-        FunSpec.builder(escape(it.key)).addCode("return %T<%T>(logicalName, %S)\n", Value.Att::class, String::class, it.key).build() //todo replace string type here with specific attribute type
+        FunSpec.builder(escape(it.key)).addCode("return %T<%T>(logicalName, %S)\n", Value.Att::class, String::class, it.key).build() //TODO replace string type here with specific attribute type
     }
 
     private fun Map<String, Property>.sorted() = toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap()
@@ -104,7 +105,7 @@ object SpecificationPoet {
             }
             .build()
 
-    private fun builderClass(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo, typeMappings: List<Triple<String, String, List<Pair<String, TypeName>>>>) = TypeSpec.companionObjectBuilder()
+    private fun builderClass(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo, typeMappings: List<TypeInfo>) = TypeSpec.companionObjectBuilder()
             .addType(
                     TypeSpec.classBuilder("Builder")
                             .primaryConstructor(builderConstructor(types, isResource, typeName, propertyInfo))
@@ -176,18 +177,20 @@ object SpecificationPoet {
     private fun childParamsWithTypes(parameters: Collection<String>) = parameters.fold(""){ acc, parameter -> acc + parameter + ": %T, " }
     private fun childParams(parameters: Collection<String>) = parameters.foldIndexed(""){ index, acc, parameter -> acc + (if(index != 0) ", " else "") + parameter }
 
-    private fun typeSetterFunction(name: String, propertyType: String, typeName: String, typeMappings:  List<Triple<String, String, List<Pair<String, TypeName>>>>): FunSpec{
-        val parent = (typeMappings.find { it.first == typeName }!!.third.find { it.first == propertyType.decapitalize() }!!.second as ClassName)
-        val requiredProperties = typeMappings.find { it.second == parent.canonicalName }!!.third.filter { !it.second.nullable }.toMap()
-        return FunSpec.builder("_" + name.decapitalize())
-                .addCode("return \"\"\nfun ${name.decapitalize()}(${childParamsWithTypes(requiredProperties.keys)} builder: ${parent.simpleName()}.Companion.Builder.() -> ${parent.simpleName()}.Companion.Builder = { this }) = ${name.decapitalize()}(${parent.simpleName()}.create(${childParams(requiredProperties.keys)}).builder().build())", *requiredProperties.values.toTypedArray())
+    private fun typeSetterFunction(name: String, propertyType: String, typeName: String, typeMappings:  List<TypeInfo>): FunSpec{
+        val parent = (typeMappings.find { it.awsTypeName == typeName }!!.properties.find { it.name == propertyType.decapitalize() }!!.typeName as ClassName)
+        val requiredProperties = typeMappings.find { it.canonicalName == parent.canonicalName }!!.properties.filter { !it.typeName.nullable }
+        val propertyNames = requiredProperties.map { it.name }
+        val propertyTypes = requiredProperties.map { it.typeName }
+        return FunSpec.builder("_" + name.decapitalize()) //TODO get LambdaTypeName working here, had to hack a stinking function to stringify my own function
+                .addCode("return \"\"\nfun ${name.decapitalize()}(${childParamsWithTypes(propertyNames)} builder: ${parent.simpleName()}.Companion.Builder.() -> ${parent.simpleName()}.Companion.Builder = { this }) = ${name.decapitalize()}(${parent.simpleName()}.create(${childParams(propertyNames)}).builder().build())", *propertyTypes.toTypedArray())
                 .build()
     }
 
     private fun buildConstructor(types: Set<String>, isResource: Boolean, classTypeName: String, propertyInfo: PropertyInfo) =
             FunSpec.constructorBuilder()
                     .addParameters(if(isResource) listOf(
-                            ParameterSpec.builder(logicalName, String::class).build()
+                            ParameterSpec.builder(logicalName, String::class).addModifiers(KModifier.OVERRIDE).addAnnotation(JsonIgnore::class).build()
                     ) else emptyList())
                     .addParameters(propertyInfo.properties.toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap().map { buildParameter(types, classTypeName, it.key, it.value) })
                     .build()
