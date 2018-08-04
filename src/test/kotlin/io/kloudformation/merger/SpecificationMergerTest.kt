@@ -3,12 +3,16 @@ package io.kloudformation.merger
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import io.kloudformation.builder.Value
 import io.kloudformation.model.Specification
 import io.kloudformation.model.extra.KloudFormationTemplate
 import io.kloudformation.poet.SpecificationPoet
 import io.kloudformation.property.s3.bucket.serverSideEncryptionRule
 import io.kloudformation.resource.ec2.vPC
 import io.kloudformation.resource.s3.bucket
+//import io.kloudformation.property.s3.bucket.serverSideEncryptionRule
+//import io.kloudformation.resource.ec2.vPC
+//import io.kloudformation.resource.s3.bucket
 import org.junit.Test
 
 class SpecificationMergerTest {
@@ -44,27 +48,86 @@ class SpecificationMergerTest {
         }))
     }
 
+
     @Test
     fun go() {
 
         val template = KloudFormationTemplate.create {
-            val vpc = vPC("VPC") {
-                cidrBlock("0.0.0.0/0")
+            val vpc = vPC(logicalName = "VPC", cidrBlock = +"0.0.0.0/0") {
                 enableDnsHostnames(true)
             }
+            vPC("VPC2", cidrBlock = +"0.0.0.0/0")
             bucket("Bucket") {
                 bucketName(vpc + "vpcBucket")
-                bucketEncryption {
-                    serverSideEncryptionConfiguration(
+                bucketEncryption(
                         arrayOf(
-                                serverSideEncryptionRule { serverSideEncryptionByDefault { sSEAlgorithm("Fred") } },
-                                serverSideEncryptionRule { serverSideEncryptionByDefault { sSEAlgorithm(vpc) } }
+                                serverSideEncryptionRule {
+                                    serverSideEncryptionByDefault(sSEAlgorithm = +"")
+                                }
                         )
-                    )
-                }
+                )
             }
         }
         println(template)
+
+        //Results in ************************************************************************
+//        KloudFormationTemplate(
+//            awsTemplateFormatVersion=2010-09-09,
+//            description=,
+//            parameters=[],
+//            resources=[
+//                VPC(
+//                    logicalName=VPC,
+//                    cidrBlock=Of(value=0.0.0.0/0),
+//                    enableDnsHostnames=Of(value=true),
+//                    enableDnsSupport=null,
+//                    instanceTenancy=null,
+//                    tags=null
+//                ),
+//                VPC(
+//                    logicalName=VPC2,
+//                    cidrBlock=Of(value=0.0.0.0/0),
+//                    enableDnsHostnames=null,
+//                    enableDnsSupport=null,
+//                    instanceTenancy=null,
+//                    tags=null
+//                ),
+//                Bucket(
+//                    logicalName=Bucket,
+//                    accelerateConfiguration=null,
+//                    accessControl=null,
+//                    analyticsConfigurations=null,
+//                    bucketEncryption=BucketEncryption(
+//                        serverSideEncryptionConfiguration=[
+//                            ServerSideEncryptionRule(
+//                                serverSideEncryptionByDefault=ServerSideEncryptionByDefault(
+//                                    sSEAlgorithm=Of(value=),
+//                                    kMSMasterKeyID=null
+//                                )
+//                            )
+//                        ]
+//                    ),
+//                    bucketName=Join(
+//                        splitter=,
+//                        joins=[
+//                            VPC(logicalName=VPC, cidrBlock=Of(value=0.0.0.0/0), enableDnsHostnames=Of(value=true), enableDnsSupport=null, instanceTenancy=null, tags=null),
+//                            Of(value=vpcBucket)
+//                        ]
+//                    ),
+//                    corsConfiguration=null,
+//                    inventoryConfigurations=null,
+//                    lifecycleConfiguration=null,
+//                    loggingConfiguration=null,
+//                    metricsConfigurations=null,
+//                    notificationConfiguration=null,
+//                    replicationConfiguration=null,
+//                    tags=null,
+//                    versioningConfiguration=null,
+//                    websiteConfiguration=null
+//                )
+//            ]
+//        )
+
 
     }
 }
