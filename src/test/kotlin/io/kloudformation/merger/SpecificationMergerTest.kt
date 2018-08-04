@@ -1,21 +1,14 @@
 package io.kloudformation.merger
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.PropertyNamingStrategy
-import com.fasterxml.jackson.databind.cfg.MapperConfig
-import com.fasterxml.jackson.databind.introspect.AnnotatedField
-import com.fasterxml.jackson.databind.introspect.AnnotatedMethod
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import io.kloudformation.builder.Value
 import io.kloudformation.model.Specification
 import io.kloudformation.model.extra.KloudFormationPropertyNamingStrategy
 import io.kloudformation.model.extra.KloudFormationTemplate
-import io.kloudformation.model.extra.Parameter
 import io.kloudformation.poet.SpecificationPoet
 import io.kloudformation.property.s3.bucket.serverSideEncryptionRule
 import io.kloudformation.resource.ec2.vPC
@@ -85,27 +78,27 @@ class SpecificationMergerTest {
     }
 
     //Results in ************************************************************************
-//    ---
-//    AWSTemplateFormatVersion: "2010-09-09"
-//    Description: ""
-//    Parameters:
-//    QuadNotificationEndpoint:
-//    Type: "AWS::EC2::Instance::Id"
-//    Resources:
-//    QuadNotificationTopic:
-//    Type: "AWS::SNS::Topic"
-//    QuadNotificationSubscription:
-//    Type: "AWS::SNS::Subscription"
-//    Endpoint:
-//    Fn::Join:
-//    - ""
-//    - - Ref: "QuadNotificationEndpoint"
-//    - Fn::GetAtt:
-//    - "QuadNotificationTopic"
-//    - "TopicName"
-//    Protocol: "email"
-//    TopicArn:
-//    Ref: "QuadNotificationTopic"
+    //---
+    //AWSTemplateFormatVersion: "2010-09-09"
+    //Description: ""
+    //Parameters:
+    //  QuadNotificationEndpoint:
+    //    Type: "AWS::EC2::Instance::Id"
+    //Resources:
+    //  QuadNotificationTopic:
+    //    Type: "AWS::SNS::Topic"
+    //  QuadNotificationSubscription:
+    //    Type: "AWS::SNS::Subscription"
+    //    Endpoint:
+    //      Fn::Join:
+    //      - ""
+    //      - - Ref: "QuadNotificationEndpoint"
+    //        - Fn::GetAtt:
+    //          - "QuadNotificationTopic"
+    //          - "TopicName"
+    //    Protocol: "email"
+    //    TopicArn:
+    //      Ref: "QuadNotificationTopic"
 
 }
 
