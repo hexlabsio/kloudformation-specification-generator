@@ -89,11 +89,8 @@ object SpecificationPoet {
                             it
                             .superclass(ParameterizedTypeName.get(KloudResource::class.asClassName(),String::class.asTypeName()))
                             .addSuperclassConstructorParameter(logicalName)
-                            .addProperties(listOf(
-                                        PropertySpec.builder(logicalName, String::class).initializer(logicalName).addModifiers(KModifier.OVERRIDE).addAnnotation(JsonIgnore::class).build(),
-                                        PropertySpec.builder("type", String::class).initializer("%S", typeName).build()
-                                    )
-                            )
+                            .addSuperclassConstructorParameter("%S", typeName)
+                            .addProperty(PropertySpec.builder(logicalName, String::class).initializer(logicalName).addModifiers(KModifier.OVERRIDE).addAnnotation(JsonIgnore::class).build())
                     }
                     .addFunctions(functionsFrom(propertyInfo.attributes.orEmpty()))
                     .addProperties(propertyInfo.properties.sorted().map { buildProperty(types, typeName, it.key, it.value) })

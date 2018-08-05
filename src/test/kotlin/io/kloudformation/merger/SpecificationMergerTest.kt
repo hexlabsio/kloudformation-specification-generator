@@ -6,10 +6,13 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import io.kloudformation.iam.*
 import io.kloudformation.model.Specification
 import io.kloudformation.model.extra.KloudFormationPropertyNamingStrategy
 import io.kloudformation.model.extra.KloudFormationTemplate
 import io.kloudformation.poet.SpecificationPoet
+import io.kloudformation.property.glue.trigger.action
+import io.kloudformation.property.iam.role.Policy
 import io.kloudformation.property.s3.bucket.serverSideEncryptionRule
 import io.kloudformation.resource.ec2.vPC
 import io.kloudformation.resource.iot.policy
@@ -19,6 +22,7 @@ import io.kloudformation.resource.sns.topic
 import io.kloudformation.resource.sns.topicPolicy
 import io.kloudformation.property.s3.bucket.serverSideEncryptionRule
 import io.kloudformation.resource.ec2.vPC
+import io.kloudformation.resource.iam.role
 import io.kloudformation.resource.s3.bucket
 import io.kloudformation.resource.sqs.queue
 import org.junit.Test
@@ -66,6 +70,23 @@ class SpecificationMergerTest {
                 topicArn(topic.ref())
                 protocol("email")
                 endpoint(notificationEmail.ref())
+            }
+            role("ROLE"){
+                this.policies(kotlin.arrayOf(
+                        Policy(
+                                policyDocument {
+                                    statement(
+                                            action("sns:*"),
+                                            resources(+"bob", topic.ref())
+                                    ) {
+                                        principal(PrincipalType.AWS, topic.ref())
+                                        principal(PrincipalType.FEDERATED, +"xyz")
+                                        condition(ConditionOperators.stringEquals, ConditionKeys.awsUserName, listOf("brian"))
+                                    }
+                                },
+                                policyName = +"NAME"
+                        )
+                ))
             }
         }
 
