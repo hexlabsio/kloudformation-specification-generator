@@ -16,7 +16,7 @@ sealed class Value<out T>{
     data class Join(val splitter: String = "", val joins: List<Value<*>>): Value<String>()
     open class Reference<out T>(val ref: String): Value<T>()
 }
-open class KloudResource<out T>(@JsonIgnore open val logicalName: String){
+open class KloudResource<out T>(@JsonIgnore open val logicalName: String, @JsonIgnore open val kloudResourceType: String = "AWS::CustomResource"){
     fun ref() = Value.Reference<T>(logicalName)
     operator fun plus(other: String) = this.ref() + other
     operator fun <T> plus(other: Value<T>) = this.ref() + other
@@ -33,7 +33,6 @@ operator fun <T,R> Value<T>.plus(other: Value<R>) = when(this){
     is Value.Join -> copy(joins = joins + other)
     else -> Value.Join(joins = listOf(this, other))
 }
-
 
 class JoinSerializer: StdSerializer<Value.Join>(Value.Join::class.java){
     override fun serialize(item: Value.Join, generator: JsonGenerator, provider: SerializerProvider) {
