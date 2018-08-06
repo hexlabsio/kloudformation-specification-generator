@@ -1,4 +1,4 @@
-# KloudFormation Specification Merger
+# kloud-formation
 
 
 ## Create a new  Template
