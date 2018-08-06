@@ -16,6 +16,7 @@ import io.kloudformation.resource.iam.role
 import io.kloudformation.resource.s3.bucket
 import io.kloudformation.resource.sns.subscription
 import io.kloudformation.resource.sns.topic
+import io.kloudformation.resource.sqs.queue
 import io.kloudformation.specification.Specification
 import io.kloudformation.specification.SpecificationMerger
 import io.kloudformation.specification.SpecificationPoet
@@ -52,6 +53,7 @@ class SpecificationMergerTest {
     fun go() {
         val template = KloudFormationTemplate.create{
             val topic = topic(logicalName = "NotificationTopic")
+            queue(dependsOn = topic.logicalName)
             role(
                     assumeRolePolicyDocument = policyDocument {
                         statement(action("sts:AssumeRole")) {

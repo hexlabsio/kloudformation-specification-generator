@@ -218,3 +218,30 @@ PolicyDocument lets you build fully type safe iam policies as shown in the examp
 //                 - "brian"
 //         PolicyName: "LambdaSnsPolicy"
 ```
+
+## Alternative Resource References
+
+```kotlin
+val template = KloudFormationTemplate.create {
+    topic().also { myTopic ->
+        subscription {
+            topicArn(myTopic.ref())
+        }
+    }
+}
+```
+
+## Dependencies
+
+Each builder function takes a `dependsOn` parameter that can be used to set a dependency as follows
+
+```kotlin
+val topic = topic()
+val q = queue(dependsOn = topic.logicalName)
+```
+
+Alternatively you can chain resources using the `then` function as follows
+
+```kotlin
+topic().then{ queue() }
+```
