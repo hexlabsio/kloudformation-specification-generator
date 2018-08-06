@@ -1,6 +1,5 @@
-package io.kloudformation.model.extra
+package io.kloudformation.model
 
-import com.fasterxml.jackson.annotation.*
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.databind.SerializerProvider
@@ -8,11 +7,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.cfg.MapperConfig
 import com.fasterxml.jackson.databind.introspect.AnnotatedMethod
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import io.kloudformation.builder.KloudResource
-import io.kloudformation.builder.Value
-
-@JsonSerialize(using = ResourceSerializer::class)
-data class Resources(val resources: Map<String, KloudResource<*>>)
+import io.kloudformation.KloudResource
+import io.kloudformation.Value
 
 data class KloudFormationTemplate(
         val awsTemplateFormatVersion: String? = "2010-09-09",
@@ -20,9 +16,38 @@ data class KloudFormationTemplate(
         val parameters: Map<String, Parameter<*>>? = emptyMap(),
         val resources: Resources
 ){
+    @JsonSerialize(using = Resources.Serializer::class)
+    data class Resources(val resources: Map<String, KloudResource<*>>) {
+
+        class Serializer : StdSerializer<Resources>(Resources::class.java) {
+            override fun serialize(item: Resources, generator: JsonGenerator, provider: SerializerProvider) {
+                generator.writeStartObject()
+                item.resources.forEach {
+                    generator.writeObjectFieldStart(it.key)
+                    generator.writeFieldName("Type")
+                    generator.writeString(it.value.kloudResourceType)
+                    if(!it.value.dependsOn.isNullOrEmpty()){
+                        generator.writeFieldName("DependsOn")
+                        generator.writeString(it.value.dependsOn)
+                    }
+                    generator.writeObjectField("Properties", it.value)
+                    generator.writeEndObject()
+                }
+                generator.writeEndObject()
+            }
+        }
+    }
+
+    class NamingStrategy : PropertyNamingStrategy() {
+        override fun nameForGetterMethod(config: MapperConfig<*>?, method: AnnotatedMethod?, defaultName: String?) =
+                if(defaultName == "awsTemplateFormatVersion") "AWSTemplateFormatVersion"
+                else defaultName!!.capitalize()
+    }
+
     class Builder(
             private val resources: MutableList<KloudResource<String>> = mutableListOf(),
-            private val parameters: MutableList<Parameter<*>> = mutableListOf()
+            private val parameters: MutableList<Parameter<*>> = mutableListOf(),
+            var currentDependee: String? = null
     ){
         fun <T: KloudResource<String>> add(resource: T): T = resource.also { this.resources.add(it)  }
         fun build() = KloudFormationTemplate(
@@ -30,7 +55,19 @@ data class KloudFormationTemplate(
                 parameters = parameters.map { it.logicalName to it }.toMap()
         )
 
+        fun allocateLogicalName(logicalName: String): String{
+            var index = 0
+            fun nameFor(index: Int) = logicalName + if(index==0)"" else "${index+1}"
+            while(with(index++){ resources.find { it.logicalName == nameFor(index-1) } != null });
+            return nameFor(index-1)
+        }
+
+        inline fun <R, reified T: KloudResource<R>> T.then(builder: Builder.(T) -> Unit): T {
+            return run { this@Builder.then(builder) }
+        }
+
         operator fun <T> T.unaryPlus() = Value.Of(this)
+
         fun <T> parameter(logicalName: String,
                           type: String = "String",
                           allowedPattern: String? = null,
@@ -45,44 +82,11 @@ data class KloudFormationTemplate(
                           noEcho: String? = null
         ) = Parameter<T>(logicalName,type, allowedPattern, allowedValues, constraintDescription, default, description, maxLength, maxValue, minLength, minValue, noEcho).also { parameters.add(it) }
     }
+
     companion object {
         fun create(dsl: Builder.() -> Unit) = Builder().apply(dsl).build()
     }
 }
 
-class KloudFormationPropertyNamingStrategy : PropertyNamingStrategy() {
-    override fun nameForGetterMethod(config: MapperConfig<*>?, method: AnnotatedMethod?, defaultName: String?) =
-            if(defaultName == "awsTemplateFormatVersion") "AWSTemplateFormatVersion"
-            else defaultName!!.capitalize()
-}
 
 
-
-class ResourceSerializer: StdSerializer<Resources>(Resources::class.java){
-    override fun serialize(item:  Resources, generator: JsonGenerator, provider: SerializerProvider) {
-        generator.writeStartObject()
-        item.resources.forEach {
-            generator.writeObjectFieldStart(it.key)
-                generator.writeFieldName("Type")
-                generator.writeString(it.value.kloudResourceType)
-                generator.writeObjectField("Properties", it.value)
-            generator.writeEndObject()
-        }
-        generator.writeEndObject()
-    }
-}
-
-data class Parameter<T>(
-        @JsonIgnore override val logicalName: String,
-        val type: String,
-        val allowedPattern: String? = null,
-        val allowedValues: List<String>? = null,
-        val constraintDescription: String? = null,
-        val default: String? = null,
-        val description: String? = null,
-        val maxLength: String? = null,
-        val maxValue: String? = null,
-        val minLength: String? = null,
-        val minValue: String? = null,
-        val noEcho: String? = null
-): KloudResource<T>(logicalName, type)

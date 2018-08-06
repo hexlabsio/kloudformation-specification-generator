@@ -6,25 +6,19 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import io.kloudformation.iam.*
-import io.kloudformation.model.Specification
-import io.kloudformation.model.extra.KloudFormationPropertyNamingStrategy
-import io.kloudformation.model.extra.KloudFormationTemplate
-import io.kloudformation.poet.SpecificationPoet
-import io.kloudformation.property.glue.trigger.action
+import io.kloudformation.model.KloudFormationTemplate
+import io.kloudformation.model.iam.*
+import io.kloudformation.plus
 import io.kloudformation.property.iam.role.Policy
-import io.kloudformation.property.s3.bucket.serverSideEncryptionRule
-import io.kloudformation.resource.ec2.vPC
-import io.kloudformation.resource.iot.policy
-import io.kloudformation.resource.s3.bucket
-import io.kloudformation.resource.sns.subscription
-import io.kloudformation.resource.sns.topic
-import io.kloudformation.resource.sns.topicPolicy
-import io.kloudformation.property.s3.bucket.serverSideEncryptionRule
+import io.kloudformation.property.route53.hostedzone.vPC
 import io.kloudformation.resource.ec2.vPC
 import io.kloudformation.resource.iam.role
 import io.kloudformation.resource.s3.bucket
-import io.kloudformation.resource.sqs.queue
+import io.kloudformation.resource.sns.subscription
+import io.kloudformation.resource.sns.topic
+import io.kloudformation.specification.Specification
+import io.kloudformation.specification.SpecificationMerger
+import io.kloudformation.specification.SpecificationPoet
 import org.junit.Test
 
 class SpecificationMergerTest {
@@ -47,13 +41,6 @@ class SpecificationMergerTest {
     )
 
     @Test
-    fun test() {
-        SpecificationMerger.merge(regionSpecifications.map {
-            jacksonObjectMapper.readValue<Specification>(this.javaClass.classLoader.getResource("specification/$it.json"))
-        })
-    }
-
-    @Test
     fun generate() {
         SpecificationPoet.generate(SpecificationMerger.merge(regionSpecifications.map {
             jacksonObjectMapper.readValue<Specification>(this.javaClass.classLoader.getResource("specification/$it.json"))
@@ -63,28 +50,28 @@ class SpecificationMergerTest {
 
     @Test
     fun go() {
-        val template = KloudFormationTemplate.create {
-            val topic = topic("NotificationTopic")
-            val notificationEmail = parameter<String>("EmailAddress")
-            subscription("NotificationSubscription") {
-                topicArn(topic.ref())
-                protocol("email")
-                endpoint(notificationEmail.ref())
-            }
-            role("ROLE"){
-                this.policies(kotlin.arrayOf(
+        val template = KloudFormationTemplate.create{
+            val topic = topic(logicalName = "NotificationTopic")
+            role(
+                    assumeRolePolicyDocument = policyDocument {
+                        statement(action("sts:AssumeRole")) {
+                            principal(PrincipalType.SERVICE, +"lambda.amazonaws.com")
+                        }
+                    }
+            ){
+                policies(arrayOf(
                         Policy(
                                 policyDocument {
                                     statement(
                                             action("sns:*"),
-                                            resources(+"bob", topic.ref())
+                                            IamPolicyEffect.Allow,
+                                            resource(topic.ref())
                                     ) {
-                                        principal(PrincipalType.AWS, topic.ref())
-                                        principal(PrincipalType.FEDERATED, +"xyz")
+                                        principal(PrincipalType.AWS, +"Some AWS Principal")
                                         condition(ConditionOperators.stringEquals, ConditionKeys.awsUserName, listOf("brian"))
                                     }
                                 },
-                                policyName = +"NAME"
+                                policyName = +"LamdbaSnsPolicy"
                         )
                 ))
             }
@@ -92,7 +79,7 @@ class SpecificationMergerTest {
 
         println(ObjectMapper(YAMLFactory())
                 .setSerializationInclusion(JsonInclude.Include.NON_NULL)
-                .setPropertyNamingStrategy(KloudFormationPropertyNamingStrategy())
+                .setPropertyNamingStrategy(KloudFormationTemplate.NamingStrategy())
                 .writerWithDefaultPrettyPrinter()
                 .writeValueAsString(template)
         )

@@ -1,6 +1,4 @@
-package io.kloudformation.merger
-
-import io.kloudformation.model.Specification
+package io.kloudformation.specification
 
 object SpecificationMerger {
     fun merge(specifications: List<Specification>) =
