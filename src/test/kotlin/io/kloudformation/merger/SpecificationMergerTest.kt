@@ -8,7 +8,6 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.kloudformation.model.KloudFormationTemplate
 import io.kloudformation.model.iam.*
-import io.kloudformation.plus
 import io.kloudformation.property.iam.role.Policy
 import io.kloudformation.property.route53.hostedzone.vPC
 import io.kloudformation.resource.ec2.vPC
@@ -54,8 +53,9 @@ class SpecificationMergerTest {
         val template = KloudFormationTemplate.create(
                 description = "A Cloudformation Template made with Kloudformation"
         ){
-            val topic = topic(logicalName = "NotificationTopic")
-            queue(dependsOn = topic.logicalName)
+            val topic = topic(logicalName = "NotificationTopic").then {
+                queue()
+            }
             role(
                     assumeRolePolicyDocument = policyDocument {
                         statement(action("sts:AssumeRole")) {

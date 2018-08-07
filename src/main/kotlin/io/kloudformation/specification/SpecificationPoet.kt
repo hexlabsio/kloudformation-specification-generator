@@ -2,6 +2,7 @@ package io.kloudformation.specification
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.squareup.kotlinpoet.*
+import io.kloudformation.Att
 import io.kloudformation.KloudResource
 import io.kloudformation.Value
 import io.kloudformation.model.KloudFormationTemplate
@@ -98,7 +99,7 @@ object SpecificationPoet {
                     .build()
 
     private fun functionsFrom(attributes: Map<String, Attribute>) = attributes.map {
-        FunSpec.builder(escape(it.key)).addCode("return %T<%T>(logicalName, %S)\n", Value.Att::class, String::class, it.key).build() //TODO replace string type here with specific attribute type
+        FunSpec.builder(escape(it.key)).addCode("return %T<%T>(logicalName, %S)\n", Att::class, String::class, it.key).build() //TODO replace string type here with specific attribute type
     }
 
     private fun Map<String, Property>.sorted() = toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap()

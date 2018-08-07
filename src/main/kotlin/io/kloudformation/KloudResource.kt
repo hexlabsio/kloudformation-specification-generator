@@ -9,20 +9,11 @@ open class KloudResource<T>(
         @JsonIgnore open val dependsOn: String? = null
 ){
 
-    fun ref() = Value.Reference<T>(logicalName)
+    fun ref() = Reference<T>(logicalName)
 
     operator fun plus(other: String) = this.ref() + other
 
-    operator fun <T> plus(other: Value<T>) = this.ref() + other
-
-    inline fun <reified R: KloudResource<T>> KloudFormationTemplate.Builder.then(builder: KloudFormationTemplate.Builder.(R) -> Unit): R {
-        return (this@KloudResource as R).also {
-            kloudResource ->
-            val previousDependee = currentDependee
-            currentDependee = kloudResource.logicalName
-            builder(kloudResource)
-            currentDependee = previousDependee
-        }
-    }
+    operator fun <R> plus(other: Value<R>) = this.ref() + other
+    operator fun <R> plus(other: KloudResource<R>) = this.ref() + other.ref()
 
 }
