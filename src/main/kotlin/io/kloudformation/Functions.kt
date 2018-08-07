@@ -40,6 +40,16 @@ data class Join(val splitter: String = "", val joins: List<Value<*>>): Value.Klo
         }
     }
 }
+@JsonSerialize(using = FnBase64.Serializer::class)
+data class FnBase64(val valueToEncode: Value<String>): Value.KloudFunction<String>() {
+    class Serializer : StdSerializer<FnBase64>(FnBase64::class.java) {
+        override fun serialize(item: FnBase64, generator: JsonGenerator, provider: SerializerProvider) {
+            generator.writeStartObject()
+            generator.writeObjectField("Fn::Base64", item.valueToEncode)
+            generator.writeEndObject()
+        }
+    }
+}
 
 operator fun <T, R> Value<T>.plus(resource: KloudResource<R>) = this + resource.ref()
 

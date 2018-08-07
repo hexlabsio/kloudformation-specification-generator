@@ -6,8 +6,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import io.kloudformation.FnBase64
 import io.kloudformation.model.KloudFormationTemplate
 import io.kloudformation.model.iam.*
+import io.kloudformation.plus
 import io.kloudformation.property.iam.role.Policy
 import io.kloudformation.property.route53.hostedzone.vPC
 import io.kloudformation.resource.ec2.vPC
@@ -52,32 +54,10 @@ class SpecificationMergerTest {
     fun go() {
         val template = KloudFormationTemplate.create(
                 description = "A Cloudformation Template made with Kloudformation"
-        ){
-            val topic = topic(logicalName = "NotificationTopic").then {
-                queue()
-            }
-            role(
-                    assumeRolePolicyDocument = policyDocument {
-                        statement(action("sts:AssumeRole")) {
-                            principal(PrincipalType.SERVICE, +"lambda.amazonaws.com")
-                        }
-                    }
-            ){
-                policies(arrayOf(
-                        Policy(
-                                policyDocument {
-                                    statement(
-                                            action("sns:*"),
-                                            IamPolicyEffect.Allow,
-                                            resource(topic.ref())
-                                    ) {
-                                        principal(PrincipalType.AWS, +"Some AWS Principal")
-                                        condition(ConditionOperators.stringEquals, ConditionKeys.awsUserName, listOf("brian"))
-                                    }
-                                },
-                                policyName = +"LamdbaSnsPolicy"
-                        )
-                ))
+        ) {
+            val topic = topic()
+            bucket {
+                bucketName(+"Bucket" + FnBase64(topic.ref()))
             }
         }
 
@@ -88,57 +68,4 @@ class SpecificationMergerTest {
                 .writeValueAsString(template)
         )
     }
-
-//---
-//AWSTemplateFormatVersion: "2010-09-09"
-//Description: ""
-//Parameters:
-//  EmailAddress:
-//    Type: "String"
-//Resources:
-//  NotificationTopic:
-//    Type: "AWS::SNS::Topic"
-//  NotificationSubscription:
-//    Type: "AWS::SNS::Subscription"
-//    Endpoint:
-//      Ref: "EmailAddress"
-//    Protocol: "email"
-//    TopicArn:
-//      Ref: "NotificationTopic"
-
 }
-
-//    @Test
-//    fun model() {
-//        Template(
-//                awsTemplateFormatVersion = "2010-09-09",
-//                description = "Provision and setup PostgreSQL RDS and a Lambda function for initialising the urlcheck database schema",
-//                parameters = mapOf(
-//                        "DBInstanceMasterUsernameParameter" to Parameter(
-//                                type="String",
-//                                default = "username",
-//                                description = "Enter db instance master username. Default is MasterUsername."),
-//                        "DBInstanceMasterPasswordParameter" to Parameter(
-//                                type="String",
-//                                default = "password",
-//                                description = "Enter db instance master password. Default is password."),
-//                        "CommitParameter" to Parameter(
-//                                type = "String",
-//                                description = "Enter commit")),
-//                resources = mapOf(
-//                        "VPC" to VPC(
-//                                cidrBlock = "60.1.0.0/16",
-//                                enableDnsSupport = true,
-//                                enableDnsHostnames = true,
-//                                tags = listOf(Tag("Name", "urlcheck-database-vpc"))),
-//                        "InternetGateway" to InternetGateway(
-//                                tags = listOf(Tag("Name", "urlcheck-database-igw"))),
-//                        "VPCGatewayAttachment" to VPCGatewayAttachment(
-//                                vpcId = "",
-//                                internetGatewayId = null),
-//                        "RouteTable" to RouteTable(vpcId = )
-//                        "Route" to Route(routeTableId = )
-//                )
-//        )
-//    }
-//}
