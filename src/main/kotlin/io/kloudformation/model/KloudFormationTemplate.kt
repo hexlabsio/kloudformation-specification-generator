@@ -1,6 +1,9 @@
 package io.kloudformation.model
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
@@ -12,15 +15,16 @@ import io.kloudformation.Value
 
 data class KloudFormationTemplate(
         val awsTemplateFormatVersion: String? = "2010-09-09",
-        val description: String? = "",
-        val parameters: Map<String, Parameter<*>>? = emptyMap(),
+        @JsonInclude(JsonInclude.Include.NON_NULL) val description: String? = null,
+        @JsonInclude(JsonInclude.Include.NON_NULL) val parameters: Map<String, Parameter<*>>? = null,
         val resources: Resources
 ){
     @JsonSerialize(using = Resources.Serializer::class)
-    data class Resources(val resources: Map<String, KloudResource<*>>) {
+    data class Resources( val resources: Map<String, KloudResource<*>>) {
 
         class Serializer : StdSerializer<Resources>(Resources::class.java) {
             override fun serialize(item: Resources, generator: JsonGenerator, provider: SerializerProvider) {
+                val codec = generator.codec
                 generator.writeStartObject()
                 item.resources.forEach {
                     generator.writeObjectFieldStart(it.key)
@@ -30,7 +34,16 @@ data class KloudFormationTemplate(
                         generator.writeFieldName("DependsOn")
                         generator.writeString(it.value.dependsOn)
                     }
-                    generator.writeObjectField("Properties", it.value)
+                    if(codec is ObjectMapper){
+                        val props = codec.valueToTree<JsonNode>(it.value)
+                        if(props.size() != 0) {
+                            generator.writeFieldName("Properties")
+                            generator.writeTree(props)
+                        }
+                    }
+                    else{
+                        generator.writeObjectField("Properties", it.value)
+                    }
                     generator.writeEndObject()
                 }
                 generator.writeEndObject()
@@ -52,7 +65,7 @@ data class KloudFormationTemplate(
         fun <T: KloudResource<String>> add(resource: T): T = resource.also { this.resources.add(it)  }
         fun build() = KloudFormationTemplate(
                 resources = Resources(resources.map { it.logicalName to it }.toMap()),
-                parameters = parameters.map { it.logicalName to it }.toMap()
+                parameters = if(parameters.isEmpty()) null else parameters.map { it.logicalName to it }.toMap()
         )
 
         fun allocateLogicalName(logicalName: String): String{

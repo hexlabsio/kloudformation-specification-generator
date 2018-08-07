@@ -1,4 +1,4 @@
-# KloudFormation Specification Merger
+# kloud-formation
 
 
 ## Create a new  Template
@@ -15,7 +15,6 @@ val template = KloudFormationTemplate.create {
 }
 // Result:
 // AWSTemplateFormatVersion: "2010-09-09"
-// Description: ""
 // Parameters:
 //   EmailAddress:
 //     Type: "String"
@@ -29,7 +28,6 @@ val template = KloudFormationTemplate.create {
 }
 // Result:
 // AWSTemplateFormatVersion: "2010-09-09"
-// Description: ""
 // Resources:
 //   Topic:
 //     Type: "AWS::SNS::Topic"
@@ -51,7 +49,6 @@ val template = KloudFormationTemplate.create {
 }
 // Result:
 // AWSTemplateFormatVersion: "2010-09-09"
-// Description: ""
 // Parameters:
 //   EmailAddress:
 //     Type: "String"
@@ -80,7 +77,6 @@ Other properties can be set in the builder function passed to resource builder a
 }
 // Result:
 // AWSTemplateFormatVersion: "2010-09-09"
-// Description: ""
 // Resources:
 //   VPC:
 //     Type: "AWS::EC2::VPC"
@@ -106,11 +102,9 @@ val template = KloudFormationTemplate.create{
 // Result:
 // AWSTemplateFormatVersion: "2010-09-09"
 // Description: ""
-// Parameters: {}
 // Resources:
 //   Topic:
 //     Type: "AWS::SNS::Topic"
-//     Properties: {}
 //   Bucket:
 //     Type: "AWS::S3::Bucket"
 //     Properties:
@@ -134,12 +128,9 @@ val template = KloudFormationTemplate.create{
 }
 // Result:
 // AWSTemplateFormatVersion: "2010-09-09"
-// Description: ""
-// Parameters: {}
 // Resources:
 //   Topic:
 //     Type: "AWS::SNS::Topic"
-//     Properties: {}
 //   Bucket:
 //     Type: "AWS::S3::Bucket"
 //     Properties:
@@ -186,12 +177,9 @@ PolicyDocument lets you build fully type safe iam policies as shown in the examp
  }
 // Result:
 // AWSTemplateFormatVersion: "2010-09-09"
-// Description: ""
-// Parameters: {}
 // Resources:
 //   NotificationTopic:
 //     Type: "AWS::SNS::Topic"
-//     Properties: {}
 //   Role:
 //     Type: "AWS::IAM::Role"
 //     Properties:

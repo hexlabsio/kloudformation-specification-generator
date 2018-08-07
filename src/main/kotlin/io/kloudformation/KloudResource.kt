@@ -3,7 +3,6 @@ package io.kloudformation
 import com.fasterxml.jackson.annotation.JsonIgnore
 import io.kloudformation.model.KloudFormationTemplate
 
-
 open class KloudResource<T>(
         @JsonIgnore open val logicalName: String,
         @JsonIgnore open val kloudResourceType: String = "AWS::CustomResource",
