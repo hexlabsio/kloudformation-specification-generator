@@ -58,12 +58,16 @@ data class KloudFormationTemplate(
     }
 
     class Builder(
+            val awsTemplateFormatVersion: String? = "2010-09-09",
+            val description: String? = null,
             private val resources: MutableList<KloudResource<String>> = mutableListOf(),
             private val parameters: MutableList<Parameter<*>> = mutableListOf(),
             var currentDependee: String? = null
     ){
         fun <T: KloudResource<String>> add(resource: T): T = resource.also { this.resources.add(it)  }
         fun build() = KloudFormationTemplate(
+                awsTemplateFormatVersion = awsTemplateFormatVersion,
+                description = description,
                 resources = Resources(resources.map { it.logicalName to it }.toMap()),
                 parameters = if(parameters.isEmpty()) null else parameters.map { it.logicalName to it }.toMap()
         )
@@ -97,7 +101,7 @@ data class KloudFormationTemplate(
     }
 
     companion object {
-        fun create(dsl: Builder.() -> Unit) = Builder().apply(dsl).build()
+        fun create(awsTemplateFormatVersion: String? = "2010-09-09", description: String? = null ,dsl: Builder.() -> Unit) = Builder(awsTemplateFormatVersion, description).apply(dsl).build()
     }
 }
 

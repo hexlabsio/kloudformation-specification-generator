@@ -51,7 +51,9 @@ class SpecificationMergerTest {
 
     @Test
     fun go() {
-        val template = KloudFormationTemplate.create{
+        val template = KloudFormationTemplate.create(
+                description = "A Cloudformation Template made with Kloudformation"
+        ){
             val topic = topic(logicalName = "NotificationTopic")
             queue(dependsOn = topic.logicalName)
             role(
