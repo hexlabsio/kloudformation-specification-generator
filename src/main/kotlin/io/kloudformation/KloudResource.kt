@@ -1,7 +1,8 @@
 package io.kloudformation
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import io.kloudformation.model.KloudFormationTemplate
+import io.kloudformation.function.Reference
+import io.kloudformation.function.plus
 
 open class KloudResource<T>(
         @JsonIgnore open val logicalName: String,

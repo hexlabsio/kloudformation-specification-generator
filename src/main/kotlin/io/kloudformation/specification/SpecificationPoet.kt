@@ -2,11 +2,10 @@ package io.kloudformation.specification
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.squareup.kotlinpoet.*
-import io.kloudformation.Att
 import io.kloudformation.KloudResource
 import io.kloudformation.Value
+import io.kloudformation.function.Att
 import io.kloudformation.model.KloudFormationTemplate
-import io.kloudformation.model.iam.resource
 import java.io.File
 
 object SpecificationPoet {
@@ -94,12 +93,12 @@ object SpecificationPoet {
                             .addProperty(PropertySpec.builder(logicalName, String::class, KModifier.OVERRIDE).initializer(logicalName).addAnnotation(JsonIgnore::class).build())
                             .addProperty(PropertySpec.builder("dependsOn", String::class.asClassName().asNullable(), KModifier.OVERRIDE).initializer("dependsOn").addAnnotation(JsonIgnore::class).build())
                     }
-                    .addFunctions(functionsFrom(propertyInfo.attributes.orEmpty()))
+                    .addFunctions(functionsFrom(types, typeName, propertyInfo.attributes.orEmpty()))
                     .addProperties(propertyInfo.properties.sorted().map { buildProperty(types, typeName, it.key, it.value) })
                     .build()
 
-    private fun functionsFrom(attributes: Map<String, Attribute>) = attributes.map {
-        FunSpec.builder(escape(it.key)).addCode("return %T<%T>(logicalName, %S)\n", Att::class, String::class, it.key).build() //TODO replace string type here with specific attribute type
+    private fun functionsFrom(types: Set<String>, typeName: String, attributes: Map<String, Attribute>) = attributes.map {
+        FunSpec.builder(escape(it.key)).addCode("return %T<%T>(logicalName, %T(%S))\n", Att::class, getType(types, typeName,it.value, false), Value.Of::class, it.key).build()
     }
 
     private fun Map<String, Property>.sorted() = toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap()
@@ -257,18 +256,24 @@ object SpecificationPoet {
     private fun valueTypeName(primitiveType: String, wrapped: Boolean) = if(wrapped) ParameterizedTypeName.get(Value::class.asClassName(), primitiveTypeName(primitiveType))
     else primitiveTypeName(primitiveType)
 
-    private fun getType(types: Set<String>, classTypeName: String, property: Property, wrapped: Boolean = true) = when {
-        !property.primitiveType.isNullOrEmpty() -> {
-            if(wrapped)ParameterizedTypeName.get(Value::class.asClassName(), primitiveTypeName(property.primitiveType!!))
-            else primitiveTypeName(property.primitiveType!!)
+    private fun getType(types: Set<String>, classTypeName: String, attribute: Attribute, wrapped: Boolean = true) =
+            getType(types, classTypeName, attribute.primitiveType, attribute.primitiveItemType, null, attribute.type, wrapped)
+
+    private fun getType(types: Set<String>, classTypeName: String, property: Property, wrapped: Boolean = true) =
+            getType(types, classTypeName, property.primitiveType, property.primitiveItemType, property.itemType, property.type, wrapped)
+
+    private fun getType(types: Set<String>, classTypeName: String, primitiveType: String?, primitiveItemType: String?, itemType: String? = null, type: String? = null, wrapped: Boolean = true) = when {
+        !primitiveType.isNullOrEmpty() -> {
+            if(wrapped)ParameterizedTypeName.get(Value::class.asClassName(), primitiveTypeName(primitiveType!!))
+            else primitiveTypeName(primitiveType!!)
         }
-        !property.primitiveItemType.isNullOrEmpty() -> {
-            if (property.type.equals("Map"))
-                ParameterizedTypeName.get(Map::class.asClassName(), String::class.asClassName(), valueTypeName(property.primitiveItemType!!, wrapped))
-            else ParameterizedTypeName.get(ClassName.bestGuess("Array"), valueTypeName(property.primitiveItemType!!, wrapped))
+        !primitiveItemType.isNullOrEmpty() -> {
+            if (type.equals("Map"))
+                ParameterizedTypeName.get(Map::class.asClassName(), String::class.asClassName(), valueTypeName(primitiveItemType!!, wrapped))
+            else ParameterizedTypeName.get(ClassName.bestGuess("Array"), valueTypeName(primitiveItemType!!, wrapped))
         }
-        !property.itemType.isNullOrEmpty() -> ParameterizedTypeName.get(ClassName.bestGuess("Array"), ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, property.itemType.toString())) + "." + property.itemType))
-        else -> ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, property.type.toString())) + "." + property.type)
+        !itemType.isNullOrEmpty() -> ParameterizedTypeName.get(ClassName.bestGuess("Array"), ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, itemType.toString())) + "." + itemType))
+        else -> ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, type.toString())) + "." + type)
     }
 
     private fun getTypeName(types: Set<String>, classTypeName: String, propertyType: String) =
