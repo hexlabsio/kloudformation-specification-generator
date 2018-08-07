@@ -79,13 +79,12 @@ data class KloudFormationTemplate(
             return nameFor(index-1)
         }
 
-        inline fun <R, T: KloudResource<R>> T.then(builder: Builder.(T) -> Unit) =
-            run {  this.also { kloudResource ->
-                val previousDependee = currentDependee
-                currentDependee = kloudResource.logicalName
-                builder(kloudResource)
-                currentDependee = previousDependee
-            } }
+        fun <R, T: KloudResource<R>> T.then(builder: Builder.(T) -> Unit) = run { also {
+            val previousDependee = currentDependee
+            currentDependee = logicalName
+            builder(this)
+            currentDependee = previousDependee
+        } }
 
         operator fun <T> T.unaryPlus() = Value.Of(this)
 
