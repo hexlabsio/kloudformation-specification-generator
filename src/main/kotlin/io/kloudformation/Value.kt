@@ -1,6 +1,7 @@
 package io.kloudformation
 
 import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
@@ -29,3 +30,13 @@ interface Value<out T>{
         }
     }
 }
+
+data class JsonValue(val json: Map<String, Any>): Value<JsonNode>{
+    class Serializer: StdSerializer<JsonValue>(JsonValue::class.java){
+        override fun serialize(item: JsonValue, generator: JsonGenerator, provider: SerializerProvider) {
+            generator.writeObject(item.json)
+        }
+    }
+}
+
+fun json(json: Map<String, Any>) = JsonValue(json)
