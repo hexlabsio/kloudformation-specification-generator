@@ -17,6 +17,7 @@ data class KloudFormationTemplate(
         val awsTemplateFormatVersion: String? = "2010-09-09",
         @JsonInclude(JsonInclude.Include.NON_NULL) val description: String? = null,
         @JsonInclude(JsonInclude.Include.NON_NULL) val parameters: Map<String, Parameter<*>>? = null,
+        val mappings: Map<String, Map<String, Map<String, Mapping.Value<*>>>>? = null,
         val resources: Resources
 ){
     @JsonSerialize(using = Resources.Serializer::class)
@@ -62,6 +63,7 @@ data class KloudFormationTemplate(
             val description: String? = null,
             private val resources: MutableList<KloudResource<String>> = mutableListOf(),
             private val parameters: MutableList<Parameter<*>> = mutableListOf(),
+            private val mappings: MutableList<Pair<String, Map<String, Map<String, Mapping.Value<*>>>>> = mutableListOf(),
             var currentDependee: String? = null
     ){
         fun <T: KloudResource<String>> add(resource: T): T = resource.also { this.resources.add(it)  }
@@ -101,6 +103,9 @@ data class KloudFormationTemplate(
                           minValue: String? = null,
                           noEcho: String? = null
         ) = Parameter<T>(logicalName,type, allowedPattern, allowedValues, constraintDescription, default, description, maxLength, maxValue, minLength, minValue, noEcho).also { parameters.add(it) }
+
+        fun mappings(vararg mappings: Pair<String, Map<String, Map<String, Mapping.Value<*>>>>) = also { this.mappings += mappings }
+
     }
 
     companion object {
