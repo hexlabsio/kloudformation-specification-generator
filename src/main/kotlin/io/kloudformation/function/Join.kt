@@ -8,7 +8,8 @@ import io.kloudformation.KloudResource
 import io.kloudformation.Value
 
 @JsonSerialize(using = Join.Serializer::class)
-data class Join(val splitter: String = "", val joins: List<Value<*>>): Value<String> {
+data class Join(val splitter: String = "", val joins: List<Value<*>>):
+        Value<String>, ImportValue.Value<String>, SplitValue<String>, SubValue<String> {
     class Serializer : StdSerializer<Join>(Join::class.java) {
         override fun serialize(item: Join, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeStartObject()

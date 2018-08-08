@@ -7,7 +7,8 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.kloudformation.Value
 
 @JsonSerialize(using = Att.Serializer::class)
-data class Att<T>(val reference: String, val attribute: Att.Value<String>): Value<T>, Select.ObjectValue<T>{
+data class Att<T>(val reference: String, val attribute: Att.Value<String>):
+        io.kloudformation.Value<T>, Select.ObjectValue<T>, SplitValue<T>, SubValue<T>{
 
     interface Value<T>
 
