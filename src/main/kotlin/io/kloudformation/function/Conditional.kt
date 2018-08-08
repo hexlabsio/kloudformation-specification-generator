@@ -6,7 +6,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.kloudformation.Value
 
-interface ConditionalValue<T>
+interface Intrinsic
+interface ConditionalValue<T>: Intrinsic
 @JsonSerialize(using = Conditional.Serializer::class)
 interface Conditional: ConditionalValue<Boolean>, Value<Boolean>{
     class Serializer: StdSerializer<Conditional>(Conditional::class.java){

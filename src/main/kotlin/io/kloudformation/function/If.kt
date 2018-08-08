@@ -10,7 +10,7 @@ import io.kloudformation.model.Condition
 interface IfValue<T>
 @JsonSerialize(using = If.Serializer::class)
 data class If<T>(val condition: Condition, val trueValue: IfValue<T>, val falseValue: IfValue<T>):
-       io.kloudformation.Value<T>, ImportValue.Value<T>, Select.ObjectValue<T>, SplitValue<T>, SubValue<T>, IfValue<T> {
+       io.kloudformation.Value<T>, ImportValue.Value<T>, Select.ObjectValue<T>, SplitValue<T>, SubValue<T>, IfValue<T>, Intrinsic {
 
 
     class Serializer: StdSerializer<If<*>>(If::class.java){

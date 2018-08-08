@@ -12,12 +12,14 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedMethod
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.kloudformation.KloudResource
 import io.kloudformation.Value
+import io.kloudformation.function.Intrinsic
 
 data class KloudFormationTemplate(
         val awsTemplateFormatVersion: String? = "2010-09-09",
         @JsonInclude(JsonInclude.Include.NON_NULL) val description: String? = null,
         @JsonInclude(JsonInclude.Include.NON_NULL) val parameters: Map<String, Parameter<*>>? = null,
         val mappings: Map<String, Map<String, Map<String, Mapping.Value<*>>>>? = null,
+        val conditions: Map<String, Intrinsic>? = null,
         val resources: Resources
 ){
     @JsonSerialize(using = Resources.Serializer::class)
@@ -64,6 +66,7 @@ data class KloudFormationTemplate(
             private val resources: MutableList<KloudResource<String>> = mutableListOf(),
             private val parameters: MutableList<Parameter<*>> = mutableListOf(),
             private val mappings: MutableList<Pair<String, Map<String, Map<String, Mapping.Value<*>>>>> = mutableListOf(),
+            private val conditions: MutableList<Pair<String, Intrinsic>> = mutableListOf(),
             var currentDependee: String? = null
     ){
         fun <T: KloudResource<String>> add(resource: T): T = resource.also { this.resources.add(it)  }
@@ -71,7 +74,9 @@ data class KloudFormationTemplate(
                 awsTemplateFormatVersion = awsTemplateFormatVersion,
                 description = description,
                 resources = Resources(resources.map { it.logicalName to it }.toMap()),
-                parameters = if(parameters.isEmpty()) null else parameters.map { it.logicalName to it }.toMap()
+                parameters = if(parameters.isEmpty()) null else parameters.map { it.logicalName to it }.toMap(),
+                mappings = if(parameters.isEmpty()) null else mappings.toMap(),
+                conditions = if(conditions.isEmpty())null else conditions.toMap()
         )
 
         fun allocateLogicalName(logicalName: String): String{
@@ -105,7 +110,7 @@ data class KloudFormationTemplate(
         ) = Parameter<T>(logicalName,type, allowedPattern, allowedValues, constraintDescription, default, description, maxLength, maxValue, minLength, minValue, noEcho).also { parameters.add(it) }
 
         fun mappings(vararg mappings: Pair<String, Map<String, Map<String, Mapping.Value<*>>>>) = also { this.mappings += mappings }
-
+        fun conditions(vararg conditions: Pair<String, Intrinsic>) = also { this.conditions += conditions }
     }
 
     companion object {
