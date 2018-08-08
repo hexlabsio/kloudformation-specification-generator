@@ -16,7 +16,12 @@ interface Value<out T>{
             Select.ObjectValue<T>,
             GetAZs.Value<T>,
             ImportValue.Value<T>,
-            Split.Value<T>{
+            SplitValue<T>,
+            SubValue<T>,
+            IfValue<T>,
+            EqualsValue,
+            ConditionalValue<T>
+    {
         class Serializer: StdSerializer<Value.Of<*>>(Value.Of::class.java){
             override fun serialize(item: Value.Of<*>, generator: JsonGenerator, provider: SerializerProvider) {
                 generator.writeObject(item.value)

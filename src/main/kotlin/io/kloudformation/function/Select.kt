@@ -8,7 +8,7 @@ import io.kloudformation.Value
 
 @JsonSerialize(using = Select.Serializer::class)
 data class Select<T>(val index: Select.IndexValue<String>, val objects: List<Select.ObjectValue<T>>)
-    : Value<T>, Cidr.Value<T>, ImportValue.Value<T>, SplitValue<T>, SubValue<T>{
+    : Value<T>, Cidr.Value<T>, ImportValue.Value<T>, SplitValue<T>, SubValue<T>, IfValue<T>{
 
     interface IndexValue<T>
     interface ObjectValue<T>

@@ -8,7 +8,7 @@ import io.kloudformation.Value
 
 @JsonSerialize(using = GetAZs.Serializer::class)
 data class GetAZs(val region: GetAZs.Value<String>):
-        io.kloudformation.Value<List<String>>, Select.ObjectValue<List<String>>, SplitValue<List<String>>, SubValue<List<String>>{
+        io.kloudformation.Value<List<String>>, Select.ObjectValue<List<String>>, SplitValue<List<String>>, SubValue<List<String>>, IfValue<List<String>>{
 
     interface Value<T>
 
