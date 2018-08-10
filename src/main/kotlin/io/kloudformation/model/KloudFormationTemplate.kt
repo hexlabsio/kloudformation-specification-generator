@@ -20,7 +20,7 @@ data class KloudFormationTemplate(
         @JsonInclude(JsonInclude.Include.NON_NULL) val description: String? = null,
         @JsonInclude(JsonInclude.Include.NON_NULL) val metadata: Value<JsonNode>? = null,
         @JsonInclude(JsonInclude.Include.NON_NULL) val parameters: Map<String, Parameter<*>>? = null,
-        @JsonInclude(JsonInclude.Include.NON_NULL) val mappings: Map<String, Map<String, Map<String, Mapping.Value<*>>>>? = null,
+        @JsonInclude(JsonInclude.Include.NON_NULL) val mappings: Map<String, Map<String, Map<String, Value<Any>>>>? = null,
         @JsonInclude(JsonInclude.Include.NON_NULL) val conditions: Map<String, Intrinsic>? = null,
         val resources: Resources,
         @JsonInclude(JsonInclude.Include.NON_NULL) val outputs: Map<String, Output>? = null
@@ -76,7 +76,7 @@ data class KloudFormationTemplate(
             val description: String? = null,
             private val resources: MutableList<KloudResource<String>> = mutableListOf(),
             private val parameters: MutableList<Parameter<*>> = mutableListOf(),
-            private val mappings: MutableList<Pair<String, Map<String, Map<String, Mapping.Value<*>>>>> = mutableListOf(),
+            private val mappings: MutableList<Pair<String, Map<String, Map<String, Value<Any>>>>> = mutableListOf(),
             private val conditions: MutableList<Pair<String, Intrinsic>> = mutableListOf(),
             private val outputs: MutableList<Pair<String, Output>> = mutableListOf(),
             private var metadata: Value<JsonNode>? = null,
@@ -88,7 +88,7 @@ data class KloudFormationTemplate(
                 description = description,
                 resources = Resources(resources.map { it.logicalName to it }.toMap()),
                 parameters = if(parameters.isEmpty()) null else parameters.map { it.logicalName to it }.toMap(),
-                mappings = if(parameters.isEmpty()) null else mappings.toMap(),
+                mappings = if(mappings.isEmpty()) null else mappings.toMap(),
                 conditions = if(conditions.isEmpty())null else conditions.toMap(),
                 outputs = if(outputs.isEmpty())null else outputs.toMap(),
                 metadata = metadata
@@ -131,7 +131,9 @@ data class KloudFormationTemplate(
                           noEcho: String? = null
         ) = Parameter<T>(logicalName,type, allowedPattern, allowedValues, constraintDescription, default, description, maxLength, maxValue, minLength, minValue, noEcho).also { parameters.add(it) }
 
-        fun mappings(vararg mappings: Pair<String, Map<String, Map<String, Mapping.Value<*>>>>) = also { this.mappings += mappings }
+        fun <T: Any> mappings(vararg mappings: Pair<String, Map<String, Map<String, Value<T>>>>) = also {
+            this.mappings += mappings
+        }
         fun conditions(vararg conditions: Pair<String, Intrinsic>) = also { this.conditions += conditions }
         fun metadata(metadata: JsonNode) = metadata(Value.Of(metadata))
         fun metadata(metadata: Value<JsonNode>) = also { this.metadata = metadata }

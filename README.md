@@ -20,6 +20,22 @@ val template = KloudFormationTemplate.create {
 //     Type: "String"
 ```
 
+## Pseudo Parameters
+
+Pseudo parameters can be used anywhere a reference can be. Here is the full list of available pseudo parameters:
+They exist within the `KloudFormationTemplate.Builder` type and are available within the `create` braces
+
+```kotlin
+val awsAccountId = Reference<String>("AWS::AccountId")
+val awsNotificationArns = Reference<List<String>>("AWS::NotificationARNs")
+fun <T> awsNoValue() = Reference<T>("AWS::NoValue")
+val awsPartition = Reference<String>("AWS::Partition")
+val awsRegion = Reference<String>("AWS::Region")
+val awsStackId = Reference<String>("AWS::StackId")
+val awsStackName = Reference<String>("AWS::StackName")
+val awsUrlSuffix = Reference<String>("AWS::URLSuffix")
+```
+
 ## Resources
 
 ```kotlin
@@ -225,11 +241,76 @@ Each builder function takes a `dependsOn` parameter that can be used to set a de
 
 ```kotlin
 val topic = topic()
-val q = queue(dependsOn = topic.logicalName)
+val q = queue(dependsOn = listOf(topic.logicalName))
 ```
 
 Alternatively you can chain resources using the `then` function as follows
 
 ```kotlin
 topic().then{ queue() }
+```
+
+You can also combine resources for multi dependant relationships as follows
+
+```kotlin
+ (topic() and topic()).then{ topic()  }
+ 
+ // Result
+ // AWSTemplateFormatVersion: "2010-09-09"
+ // Resources:
+ //   Topic:
+ //     Type: "AWS::SNS::Topic"
+ //   Topic2:
+ //     Type: "AWS::SNS::Topic"
+ //   Topic3:
+ //     Type: "AWS::SNS::Topic"
+ //     DependsOn:
+ //     - "Topic"
+ //     - "Topic2"
+```
+
+
+## Mappings
+
+There is a function exposed when inside the `create` braces called `mappings` that allows you to create the mappings section within your template.
+It takes a three level nested map. The following example shows how you might create an ec2 instance based on the region your stack is being created in.
+
+_Note here that the `awsRegion` is one of the Pseudo Parameters (see above for full list)_
+
+```kotlin
+val template = KloudFormationTemplate.create {
+    val regions = "RegionMap"
+    val usEast1 = "us-east-1"
+    val euWest1 = "eu-west-1"
+    val bits32 = "32"
+    mappings(
+        regions to mapOf(
+                usEast1 to mapOf( bits32 to +"ami-6411e20d"),
+                euWest1 to mapOf( bits32 to +"ami-37c2f643")
+        )
+    )
+    instance{
+        instanceType("m1.small")
+        imageId(FindInMap(+regions, awsRegion, +bits32))
+    }
+}
+
+// Result
+// AWSTemplateFormatVersion: "2010-09-09"
+// Mappings:
+//   RegionMap:
+//     us-east-1:
+//       32: "ami-6411e20d"
+//     eu-west-1:
+//       32: "ami-37c2f643"
+// Resources:
+//   Instance:
+//     Type: "AWS::EC2::Instance"
+//     Properties:
+//       ImageId:
+//         Fn::FindInMap:
+//         - "RegionMap"
+//         - Ref: "AWS::Region"
+//         - "32"
+//       InstanceType: "m1.small"
 ```

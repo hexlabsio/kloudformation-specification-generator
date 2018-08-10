@@ -21,7 +21,8 @@ interface Value<out T>{
             SubValue<T>,
             IfValue<T>,
             EqualsValue,
-            ConditionalValue<T>
+            ConditionalValue<T>,
+            FindInMapValue<T>
     {
         class Serializer: StdSerializer<Value.Of<*>>(Value.Of::class.java){
             override fun serialize(item: Value.Of<*>, generator: JsonGenerator, provider: SerializerProvider) {
