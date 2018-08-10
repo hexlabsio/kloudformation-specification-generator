@@ -12,7 +12,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.2.50</kotlin.version>
+        <kotlin.version>1.2.60</kotlin.version>
         <jackson.version>2.9.5</jackson.version>
         <kotlinpoet.version>0.6.0</kotlinpoet.version>
         <maven-shade-plugin.version>3.1.0</maven-shade-plugin.version>
@@ -85,11 +85,12 @@
         </dependency>
 
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.11</version>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-test-junit5</artifactId>
+            <version>${kotlin.version}</version>
             <scope>test</scope>
         </dependency>
+
 
     </dependencies>
 </project>

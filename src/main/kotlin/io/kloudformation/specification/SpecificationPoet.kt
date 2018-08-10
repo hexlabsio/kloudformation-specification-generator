@@ -11,16 +11,49 @@ import java.io.File
 object SpecificationPoet {
 
     val logicalName = "logicalName"
+    val dependsOn = "dependsOn"
+    val condition = "condition"
+
+    val resourceProperties = listOf(logicalName, dependsOn, condition)
+
+    fun builderPropertyTypeFor(resourceProperty: String) = String::class.asTypeName().let { if(resourceProperty == logicalName) it else it.asNullable() }
+
+    val builderFunctionResourceParameters = resourceProperties.map { ParameterSpec.builder(it, String::class.asClassName().asNullable()).defaultValue("null").build() }
+    fun TypeSpec.Builder.addResourceConstructorParameters() = also {
+        resourceProperties.forEach {
+            addSuperclassConstructorParameter("$it = $it")
+            addProperty(PropertySpec.builder(it, builderPropertyTypeFor(it), KModifier.OVERRIDE).initializer(it).addAnnotation(JsonIgnore::class).build())
+        }
+    }
+    fun FunSpec.Builder.addResourceConstructorParameters() = also {
+        resourceProperties.filter { it != logicalName }.forEach {
+            addParameter(ParameterSpec.builder(it, String::class.asClassName().asNullable(), KModifier.OVERRIDE).defaultValue("null").addAnnotation(JsonIgnore::class).build())
+        }
+    }
+
+    fun TypeSpec.Builder.addBuilderResourceProperties() = also {
+        resourceProperties.filter { it != logicalName }.forEach {
+            addProperty(PropertySpec.builder(it, String::class.asClassName().asNullable()).initializer(it).build())
+        }
+    }
+
+    fun FunSpec.Builder.addResourceParameters() = also {
+        resourceProperties.filter { it != logicalName }.forEach {
+            addParameter(ParameterSpec.builder(it, String::class.asClassName().asNullable()).defaultValue("null").build())
+        }
+    }
+
+
 
     private data class TypeInfo(val awsTypeName: String, val canonicalName: String, val  properties: List<PropertyTypeInfo>)
     private data class PropertyTypeInfo(val name: String, val typeName: TypeName)
 
-    fun generate(specification: Specification){
+    fun generateSpecs(specification: Specification): List<FileSpec>{
         val types = (specification.propertyTypes + specification.resourceTypes)
         val files = (specification.propertyTypes
                 .map { it.key to buildFile(types.keys, false, it.key, it.value) } +
-        specification.resourceTypes
-                .map { it.key to buildFile(types.keys, true, it.key, it.value) }).toMap()
+                specification.resourceTypes
+                        .map { it.key to buildFile(types.keys, true, it.key, it.value) }).toMap()
 
         val fieldMappings = files.map {
             TypeInfo(
@@ -31,7 +64,7 @@ object SpecificationPoet {
                     }
             )
         }
-        files.map { file ->
+        return files.map { file ->
             val type = file.value.members.first{ it is TypeSpec } as TypeSpec
             val propertyType = file.key
             val propertyInfo = types[propertyType]
@@ -42,13 +75,17 @@ object SpecificationPoet {
                     }
                     .addType(
                             type.toBuilder()
-                            .primaryConstructor(type.primaryConstructor)
-                            .companionObject(companionObject(types.keys, isResource, propertyType, propertyInfo!!))
-                            .addType(builderClass((specification.propertyTypes + specification.resourceTypes).keys, isResource, propertyType, propertyInfo, fieldMappings))
-                            .build()
+                                    .primaryConstructor(type.primaryConstructor)
+                                    .companionObject(companionObject(types.keys, isResource, propertyType, propertyInfo!!))
+                                    .addType(builderClass((specification.propertyTypes + specification.resourceTypes).keys, isResource, propertyType, propertyInfo, fieldMappings))
+                                    .build()
                     )
                     .build()
-        }.forEach { it.writeTo(File(System.getProperty("user.dir") + "/target/generated-sources")) }
+        }
+    }
+
+    fun generate(specification: Specification){
+       generateSpecs(specification).forEach { it.writeTo(File(System.getProperty("user.dir") + "/target/generated-sources")) }
     }
 
     private fun buildFile(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
@@ -68,10 +105,7 @@ object SpecificationPoet {
                     func.addCode( "return builder( $name.create(${paramListFrom(propertyInfo, false)}) ).build()\n" )
                 }
                 propertyInfo.properties.sorted().filter { it.value.required }.map { func.addParameter(buildParameter(types, typeName, it.key, it.value)) }
-                if (isResource) {
-                    func.addParameter(ParameterSpec.builder(logicalName, String::class.asClassName().asNullable()).defaultValue("null").build())
-                    func.addParameter(ParameterSpec.builder("dependsOn", String::class.asClassName().asNullable()).defaultValue("null").build())
-                }
+                if (isResource) func.addParameters(builderFunctionResourceParameters)
                 func.addParameter(ParameterSpec.builder("builder", LambdaTypeName.get(builderClassNameFrom(name), returnType = builderClassNameFrom(name))).defaultValue("{ this }").build())
             }
                 .receiver(KloudFormationTemplate.Builder::class)
@@ -87,14 +121,19 @@ object SpecificationPoet {
                         if(isResource)
                             it
                             .superclass(ParameterizedTypeName.get(KloudResource::class.asClassName(),String::class.asTypeName()))
-                            .addSuperclassConstructorParameter("$logicalName = $logicalName")
                             .addSuperclassConstructorParameter("kloudResourceType = %S", typeName)
-                            .addSuperclassConstructorParameter("dependsOn = dependsOn")
-                            .addProperty(PropertySpec.builder(logicalName, String::class, KModifier.OVERRIDE).initializer(logicalName).addAnnotation(JsonIgnore::class).build())
-                            .addProperty(PropertySpec.builder("dependsOn", String::class.asClassName().asNullable(), KModifier.OVERRIDE).initializer("dependsOn").addAnnotation(JsonIgnore::class).build())
+                            .addResourceConstructorParameters()
                     }
                     .addFunctions(functionsFrom(types, typeName, propertyInfo.attributes.orEmpty()))
                     .addProperties(propertyInfo.properties.sorted().map { buildProperty(types, typeName, it.key, it.value) })
+                    .build()
+
+
+    private fun buildConstructor(types: Set<String>, isResource: Boolean, classTypeName: String, propertyInfo: PropertyInfo) =
+            FunSpec.constructorBuilder()
+                    .also { if(isResource) it.addParameter(ParameterSpec.builder(logicalName, String::class, KModifier.OVERRIDE).addAnnotation(JsonIgnore::class).build()) }
+                    .addParameters(propertyInfo.properties.toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap().map { buildParameter(types, classTypeName, it.key, it.value) })
+                    .also { if(isResource) it.addResourceConstructorParameters() }
                     .build()
 
     private fun functionsFrom(types: Set<String>, typeName: String, attributes: Map<String, Attribute>) = attributes.map {
@@ -110,9 +149,7 @@ object SpecificationPoet {
                     func.addParameter(ParameterSpec.builder(logicalName, String::class).build())
                 }
                 func.addParameters(propertyInfo.properties.sorted().filter { it.value.required }.map{ buildParameter(types, typeName, it.key, it.value) })
-                if(isResource){
-                    func.addParameter(ParameterSpec.builder("dependsOn", String::class.asClassName().asNullable()).defaultValue("null").build())
-                }
+                if(isResource) func.addResourceParameters()
             }
             .build()
 
@@ -122,18 +159,12 @@ object SpecificationPoet {
 
     private fun builderClass(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo, typeMappings: List<TypeInfo>) = TypeSpec.classBuilder("Builder")
             .primaryConstructor(builderConstructor(types, isResource, typeName, propertyInfo))
-            .also {
-                if(isResource)
-                    it.addProperty(PropertySpec.builder(logicalName, String::class).initializer(logicalName).build())
-            }
+            .also { if(isResource) it.addProperty(PropertySpec.builder(logicalName, String::class).initializer(logicalName).build()) }
             .addProperties(propertyInfo.properties.sorted().let {
                 it.filter { !it.value.required }.map { buildVarProperty(types, typeName, it.key, it.value) } +
                         it.filter { it.value.required }.map { buildProperty(types, typeName, it.key, it.value) }
             })
-            .also {
-                if(isResource)
-                    it.addProperty(PropertySpec.builder("dependsOn", String::class.asClassName().asNullable()).initializer("dependsOn").build())
-            }
+            .also { if(isResource) it.addBuilderResourceProperties() }
             .addFunctions(
                     propertyInfo.properties.filter { !it.value.required }.flatMap {
                         listOfNotNull(
@@ -151,7 +182,7 @@ object SpecificationPoet {
                     } + listOf(
                             FunSpec.builder("build")
                                     .also {
-                                        val primitiveProperties = propertyInfo.properties.keys + (if(isResource) setOf("dependsOn") else emptySet())
+                                        val primitiveProperties = propertyInfo.properties.keys + (if(isResource) resourceProperties.filter { it != logicalName } else emptySet())
                                         it.addCode("return ${getClassName(typeName)}( " + primitiveProperties.foldIndexed(if(isResource) logicalName + (if(primitiveProperties.isNotEmpty()) ", " else "") else "") {
                                             index, acc, item ->  acc + (if(index != 0)", " else "") + "${item.decapitalize()} = ${item.decapitalize()}"
                                         } + ")\n")
@@ -164,12 +195,12 @@ object SpecificationPoet {
     private fun paramListFrom(propertyInfo: PropertyInfo, isResource: Boolean, addCurrentDependee: Boolean = false, specialLogicalName: String? = null): String{
         val nameList = (if(isResource) listOf(logicalName) else emptyList()) +
                 propertyInfo.properties.sorted().filter { it.value.required }.keys.map { it.decapitalize() } +
-                (if(isResource) listOf("dependsOn") else emptyList())
+                (if(isResource)  resourceProperties.filter { it != logicalName } else emptyList())
         return nameList.foldIndexed(""){
             index, acc, name -> acc + (if(index != 0) ", " else "") + "$name = " +
                 (
-                    if(name == "dependsOn" && addCurrentDependee) "$name ?: currentDependee"
-                    else if(name == "logicalName" && !specialLogicalName.isNullOrEmpty()) "$name ?: allocateLogicalName(\"$specialLogicalName\")"
+                    if(name == dependsOn && addCurrentDependee) "$name ?: currentDependee"
+                    else if(name == logicalName && !specialLogicalName.isNullOrEmpty()) "$name ?: allocateLogicalName(\"$specialLogicalName\")"
                     else name
                 )
         }
@@ -181,7 +212,7 @@ object SpecificationPoet {
         }
         else FunSpec.builder("create").addCode("return Builder(${paramListFrom(propertyInfo, false)})\n")
         propertyInfo.properties.sorted().filter { it.value.required }.forEach { funSpec.addParameter(buildParameter(types, typeName, it.key, it.value)) }
-        if(isResource) funSpec.addParameter(ParameterSpec.builder("dependsOn", String::class.asClassName().asNullable()).defaultValue("null").build())
+        if(isResource) funSpec.addResourceParameters()
         return funSpec.build()
     }
 
@@ -210,17 +241,6 @@ object SpecificationPoet {
                 .addCode("return \"\"\nfun ${name.decapitalize()}(${childParamsWithTypes(propertyNames)} builder: ${parent.simpleName()}.Builder.() -> ${parent.simpleName()}.Builder = { this }) = ${name.decapitalize()}(${parent.simpleName()}.create(${childParams(propertyNames)}).builder().build())", *propertyTypes.toTypedArray())
                 .build()
     }
-
-    private fun buildConstructor(types: Set<String>, isResource: Boolean, classTypeName: String, propertyInfo: PropertyInfo) =
-            FunSpec.constructorBuilder()
-                    .addParameters(if(isResource) listOf(
-                            ParameterSpec.builder(logicalName, String::class, KModifier.OVERRIDE).addAnnotation(JsonIgnore::class).build()
-                    ) else emptyList())
-                    .addParameters(propertyInfo.properties.toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap().map { buildParameter(types, classTypeName, it.key, it.value) })
-                    .addParameters(if(isResource) listOf(
-                            ParameterSpec.builder("dependsOn", String::class.asClassName().asNullable(), KModifier.OVERRIDE).defaultValue("null").addAnnotation(JsonIgnore::class).build()
-                    ) else emptyList())
-                    .build()
 
     private fun buildProperty(types: Set<String>, classTypeName: String, propertyName: String, property: Property) =
             PropertySpec.builder(
@@ -251,7 +271,7 @@ object SpecificationPoet {
             "io.kloudformation.${if (isResource) "resource" else "property"}${typeName.split("::", ".").dropLast(1).joinToString(".").toLowerCase().replaceFirst("aws.", ".")}"
 
 
-    private fun primitiveTypeName(primitiveType: String) = ClassName.bestGuess(primitiveType.replace("Json", "com.fasterxml.jackson.databind.JsonNode").replace("Timestamp", "java.time.Instant").replace("Integer", "kotlin.Int"))
+    private fun primitiveTypeName(primitiveType: String) = ClassName.bestGuess(primitiveType.replace("Json", "com.fasterxml.jackson.databind.JsonNode").replace("Timestamp", "java.time.Instant").replace("Integer", "kotlin.Int").replace("String", "kotlin.String"))
 
     private fun valueTypeName(primitiveType: String, wrapped: Boolean) = if(wrapped) ParameterizedTypeName.get(Value::class.asClassName(), primitiveTypeName(primitiveType))
     else primitiveTypeName(primitiveType)

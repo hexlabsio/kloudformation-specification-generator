@@ -18,7 +18,7 @@ data class KloudFormationTemplate(
         val awsTemplateFormatVersion: String? = "2010-09-09",
         @JsonInclude(JsonInclude.Include.NON_NULL) val description: String? = null,
         @JsonInclude(JsonInclude.Include.NON_NULL) val parameters: Map<String, Parameter<*>>? = null,
-        val mappings: Map<String, Map<String, Map<String, Mapping.Value<*>>>>? = null,
+        @JsonInclude(JsonInclude.Include.NON_NULL)  val mappings: Map<String, Map<String, Map<String, Mapping.Value<*>>>>? = null,
         val conditions: Map<String, Intrinsic>? = null,
         val resources: Resources
 ){
@@ -36,6 +36,10 @@ data class KloudFormationTemplate(
                     if(!it.value.dependsOn.isNullOrEmpty()){
                         generator.writeFieldName("DependsOn")
                         generator.writeString(it.value.dependsOn)
+                    }
+                    if(!it.value.condition.isNullOrEmpty()){
+                        generator.writeFieldName("Condition")
+                        generator.writeString(it.value.condition)
                     }
                     if(codec is ObjectMapper){
                         val props = codec.valueToTree<JsonNode>(it.value)
