@@ -15,10 +15,10 @@ object SpecificationPoet {
     val condition = "condition"
 
     val resourceProperties = listOf(logicalName, dependsOn, condition)
+    fun typeFor(resource: String) = if(resource == dependsOn) ParameterizedTypeName.get(List::class, String::class) else String::class.asTypeName()
+    fun builderPropertyTypeFor(resourceProperty: String) = typeFor(resourceProperty).let { if(resourceProperty == logicalName) it else it.asNullable() }
 
-    fun builderPropertyTypeFor(resourceProperty: String) = String::class.asTypeName().let { if(resourceProperty == logicalName) it else it.asNullable() }
-
-    val builderFunctionResourceParameters = resourceProperties.map { ParameterSpec.builder(it, String::class.asClassName().asNullable()).defaultValue("null").build() }
+    val builderFunctionResourceParameters = resourceProperties.map { ParameterSpec.builder(it, typeFor(it).asNullable()).defaultValue("null").build() }
     fun TypeSpec.Builder.addResourceConstructorParameters() = also {
         resourceProperties.forEach {
             addSuperclassConstructorParameter("$it = $it")
@@ -27,19 +27,19 @@ object SpecificationPoet {
     }
     fun FunSpec.Builder.addResourceConstructorParameters() = also {
         resourceProperties.filter { it != logicalName }.forEach {
-            addParameter(ParameterSpec.builder(it, String::class.asClassName().asNullable(), KModifier.OVERRIDE).defaultValue("null").addAnnotation(JsonIgnore::class).build())
+            addParameter(ParameterSpec.builder(it,typeFor(it).asNullable(), KModifier.OVERRIDE).defaultValue("null").addAnnotation(JsonIgnore::class).build())
         }
     }
 
     fun TypeSpec.Builder.addBuilderResourceProperties() = also {
         resourceProperties.filter { it != logicalName }.forEach {
-            addProperty(PropertySpec.builder(it, String::class.asClassName().asNullable()).initializer(it).build())
+            addProperty(PropertySpec.builder(it, typeFor(it).asNullable()).initializer(it).build())
         }
     }
 
     fun FunSpec.Builder.addResourceParameters() = also {
         resourceProperties.filter { it != logicalName }.forEach {
-            addParameter(ParameterSpec.builder(it, String::class.asClassName().asNullable()).defaultValue("null").build())
+            addParameter(ParameterSpec.builder(it, typeFor(it).asNullable()).defaultValue("null").build())
         }
     }
 
@@ -199,7 +199,7 @@ object SpecificationPoet {
         return nameList.foldIndexed(""){
             index, acc, name -> acc + (if(index != 0) ", " else "") + "$name = " +
                 (
-                    if(name == dependsOn && addCurrentDependee) "$name ?: currentDependee"
+                    if(name == dependsOn && addCurrentDependee) "$name ?: currentDependees"
                     else if(name == logicalName && !specialLogicalName.isNullOrEmpty()) "$name ?: allocateLogicalName(\"$specialLogicalName\")"
                     else name
                 )

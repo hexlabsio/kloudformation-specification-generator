@@ -34,9 +34,10 @@ data class KloudFormationTemplate(
                     generator.writeObjectFieldStart(it.key)
                     generator.writeFieldName("Type")
                     generator.writeString(it.value.kloudResourceType)
-                    if(!it.value.dependsOn.isNullOrEmpty()){
-                        generator.writeFieldName("DependsOn")
-                        generator.writeString(it.value.dependsOn)
+                    if(it.value.dependsOn?.isEmpty() == false){
+                        generator.writeArrayFieldStart("DependsOn")
+                        it.value.dependsOn!!.forEach { generator.writeString(it) }
+                        generator.writeEndArray()
                     }
                     if(!it.value.condition.isNullOrEmpty()){
                         generator.writeFieldName("Condition")
@@ -73,7 +74,7 @@ data class KloudFormationTemplate(
             private val mappings: MutableList<Pair<String, Map<String, Map<String, Mapping.Value<*>>>>> = mutableListOf(),
             private val conditions: MutableList<Pair<String, Intrinsic>> = mutableListOf(),
             private var metadata: Value<JsonNode>? = null,
-            var currentDependee: String? = null
+            var currentDependees: List<String>? = null
     ){
         fun <T: KloudResource<String>> add(resource: T): T = resource.also { this.resources.add(it)  }
         fun build() = KloudFormationTemplate(
@@ -94,10 +95,17 @@ data class KloudFormationTemplate(
         }
 
         fun <R, T: KloudResource<R>> T.then(builder: Builder.(T) -> Unit) = run { also {
-            val previousDependee = currentDependee
-            currentDependee = logicalName
+            val previousDependees = currentDependees
+            currentDependees = listOf(logicalName)
             builder(this)
-            currentDependee = previousDependee
+            currentDependees = previousDependees
+        } }
+
+        fun <T: KloudResource<*>> Iterable<T>.then(builder: Builder.(Iterable<T>) -> Unit) = run { also {
+            val previousDependees = currentDependees
+            currentDependees = map { it.logicalName }
+            builder(this)
+            currentDependees = previousDependees
         } }
 
         operator fun <T> T.unaryPlus() = Value.Of(this)
