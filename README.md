@@ -22,8 +22,11 @@ val template = KloudFormationTemplate.create {
 
 ## Pseudo Parameters
 
-Pseudo parameters can be used anywhere a reference can be. Here is the full list of available pseudo parameters:
+Pseudo parameters can be used anywhere a reference can be.
+
 They exist within the `KloudFormationTemplate.Builder` type and are available within the `create` braces
+
+Here is the full list of available pseudo parameters:
 
 ```kotlin
 val awsAccountId = Reference<String>("AWS::AccountId")
@@ -406,7 +409,7 @@ val template = KloudFormationTemplate.create {
     conditions(
             inProduction to (environment.ref() eq +"prod")
     )
-    instance(condition = inProduction){
+    instance{
         instanceType(If(inProduction, +"m1.large", +"t2.micro"))
     }
 }
