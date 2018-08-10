@@ -431,7 +431,6 @@ val template = KloudFormationTemplate.create {
 // Resources:
 //   Instance:
 //     Type: "AWS::EC2::Instance"
-//     Condition: "InProduction"
 //     Properties:
 //       InstanceType:
 //         Fn::If:
