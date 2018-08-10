@@ -32,6 +32,7 @@ interface Value<out T>{
     }
 }
 
+@JsonSerialize(using = JsonValue.Serializer::class)
 data class JsonValue(val json: Map<String, Any>): Value<JsonNode>{
     class Serializer: StdSerializer<JsonValue>(JsonValue::class.java){
         override fun serialize(item: JsonValue, generator: JsonGenerator, provider: SerializerProvider) {

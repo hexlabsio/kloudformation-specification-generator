@@ -159,6 +159,11 @@ val template = KloudFormationTemplate.create{
 //           - "Bucket"
 ```
 
+## JSON
+Some sections in a cloudformation template take raw JSON. Anywhere that takes JSON you can use the `json` function to pass a map. 
+
+Alternatively, if a policy document is needed there are specially designed objects to build those up, shown below.
+
 ## IAM Policy Documents
 
 AWS simply state that certain resources are of the type JsonNode. To remedy this we have wrapped that in our Value type so that our PolicyDocument type can be used instead.
@@ -273,6 +278,7 @@ You can also combine resources for multi dependant relationships as follows
 ## Mappings
 
 There is a function exposed when inside the `create` braces called `mappings` that allows you to create the mappings section within your template.
+
 It takes a three level nested map. The following example shows how you might create an ec2 instance based on the region your stack is being created in.
 
 _Note here that the `awsRegion` is one of the Pseudo Parameters (see above for full list)_
@@ -313,4 +319,161 @@ val template = KloudFormationTemplate.create {
 //         - Ref: "AWS::Region"
 //         - "32"
 //       InstanceType: "m1.small"
+```
+
+## Conditions
+There is a function exposed when inside the `create` braces called `conditions` that allows you to create the conditions section within your template.
+
+Here is an example of how to create resources only in production based on an environment variable that is passed in.
+
+```kotlin
+val template = KloudFormationTemplate.create {
+    val environment = parameter<String>(
+            logicalName = "Environment",
+            description = "AWS Environmnet",
+            default = "nonprod",
+            allowedValues = listOf("nonprod", "prod")
+    )
+    val inProduction = "InProduction"
+    conditions(
+            inProduction to (environment.ref() eq +"prod")
+    )
+    instance(condition = inProduction){
+        instanceType("m1.small")
+    }
+}
+
+// Result
+// AWSTemplateFormatVersion: "2010-09-09"
+// Parameters:
+//   Environment:
+//     Type: "String"
+//     AllowedValues:
+//     - "nonprod"
+//     - "prod"
+//     Default: "nonprod"
+//     Description: "AWS Environmnet"
+// Conditions:
+//   InProduction:
+//     Fn::Equals:
+//     - Ref: "Environment"
+//     - "prod"
+// Resources:
+//   Instance:
+//     Type: "AWS::EC2::Instance"
+//     Condition: "InProduction"
+//     Properties:
+//       InstanceType: "m1.small"
+```
+
+## Conditional Logic
+Within the conditions section shown above within a template you will have full access to any of the conditional functions shown below.
+
+### Equals
+```kotlin
+val envIsProd = environment.ref() eq +"prod"
+```
+
+### Or
+```kotlin
+val envIsDevOrTest = (environment.ref() eq +"dev") or (environment.ref() eq +"test")
+```
+
+### And
+```kotlin
+val envIsProdAndHuge = (environment.ref() eq +"prod") and (size.ref() eq +"huge")
+```
+
+### Not
+```kotlin
+val envIsNotProd = not(environment.ref() eq +"prod")
+```
+
+## If Function
+Once a Condition is set up you can use the if function to pick a value based on the condition being true or false
+
+In the following example an ec2 instance will be created. If in prod it will be an m1.large but in dev it will be a t2.micro
+
+```kotlin
+val template = KloudFormationTemplate.create {
+    val environment = parameter<String>(
+            logicalName = "Environment",
+            description = "AWS Environmnet",
+            default = "nonprod",
+            allowedValues = listOf("nonprod", "prod")
+    )
+    val inProduction = "InProduction"
+    conditions(
+            inProduction to (environment.ref() eq +"prod")
+    )
+    instance(condition = inProduction){
+        instanceType(If(inProduction, +"m1.large", +"t2.micro"))
+    }
+}
+// Result
+// AWSTemplateFormatVersion: "2010-09-09"
+// Parameters:
+//   Environment:
+//     Type: "String"
+//     AllowedValues:
+//     - "nonprod"
+//     - "prod"
+//     Default: "nonprod"
+//     Description: "AWS Environmnet"
+// Conditions:
+//   InProduction:
+//     Fn::Equals:
+//     - Ref: "Environment"
+//     - "prod"
+// Resources:
+//   Instance:
+//     Type: "AWS::EC2::Instance"
+//     Condition: "InProduction"
+//     Properties:
+//       InstanceType:
+//         Fn::If:
+//         - "InProduction"
+//         - "m1.large"
+//         - "t2.micro"
+```
+
+## Custom Resources
+There are two types of custom resources: `AWS::CloudFormation::CustomResource` and `Custom::<some string>`.
+
+Both types can be made with the customResource function provided. In order to change the type to `Custom::<some string>` call a method named `asCustomResource` after building.
+Shown Below:
+
+```kotlin
+val template = KloudFormationTemplate.create {
+    val standardCustomResource = customResource(
+            logicalName = "DatabaseInitializer",
+            serviceToken = +"arn:aws::xxxx:xxx",
+            metadata = json(mapOf(
+                    "SomeKey" to "SomeValue"
+            ))
+    )
+    val customNameCustomResource = customResource(
+            logicalName = "DatabaseInitializer2",
+            serviceToken = +"arn:aws::xxxx:xxx",
+            metadata = json(mapOf(
+                    "SomeKey" to "SomeValue"
+            ))
+    ).asCustomResource("DBInit")
+}
+
+// Result
+// AWSTemplateFormatVersion: "2010-09-09"
+// Resources:
+//   DatabaseInitializer:
+//     Type: "AWS::CloudFormation::CustomResource"
+//     Metadata:
+//       SomeKey: "SomeValue"
+//     Properties:
+//       ServiceToken: "arn:aws::xxxx:xxx"
+//   DatabaseInitializer2:
+//     Type: "Custom::DBInit"
+//     Metadata:
+//       SomeKey: "SomeValue"
+//     Properties:
+//       ServiceToken: "arn:aws::xxxx:xxx"
 ```
