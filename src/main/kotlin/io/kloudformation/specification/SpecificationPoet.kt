@@ -1,6 +1,7 @@
 package io.kloudformation.specification
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.databind.JsonNode
 import com.squareup.kotlinpoet.*
 import io.kloudformation.KloudResource
 import io.kloudformation.Value
@@ -10,34 +11,39 @@ import java.io.File
 
 object SpecificationPoet {
 
-    val logicalName = "logicalName"
-    val dependsOn = "dependsOn"
-    val condition = "condition"
+    private val logicalName = "logicalName"
+    private val dependsOn = "dependsOn"
+    private val condition = "condition"
+    private val metadata = "metadata"
 
-    val resourceProperties = listOf(logicalName, dependsOn, condition)
-    fun typeFor(resource: String) = if(resource == dependsOn) ParameterizedTypeName.get(List::class, String::class) else String::class.asTypeName()
-    fun builderPropertyTypeFor(resourceProperty: String) = typeFor(resourceProperty).let { if(resourceProperty == logicalName) it else it.asNullable() }
+    private val resourceProperties = listOf(logicalName, dependsOn, condition, metadata)
+    private fun typeFor(resource: String) = when(resource){
+        dependsOn -> ParameterizedTypeName.get(List::class, String::class)
+        metadata -> ParameterizedTypeName.get(Value::class, JsonNode::class)
+        else -> String::class.asTypeName()
+    }
+    private fun builderPropertyTypeFor(resourceProperty: String) = typeFor(resourceProperty).let { if(resourceProperty == logicalName) it else it.asNullable() }
 
-    val builderFunctionResourceParameters = resourceProperties.map { ParameterSpec.builder(it, typeFor(it).asNullable()).defaultValue("null").build() }
-    fun TypeSpec.Builder.addResourceConstructorParameters() = also {
+    private val builderFunctionResourceParameters = resourceProperties.map { ParameterSpec.builder(it, typeFor(it).asNullable()).defaultValue("null").build() }
+    private fun TypeSpec.Builder.addResourceConstructorParameters() = also {
         resourceProperties.forEach {
             addSuperclassConstructorParameter("$it = $it")
             addProperty(PropertySpec.builder(it, builderPropertyTypeFor(it), KModifier.OVERRIDE).initializer(it).addAnnotation(JsonIgnore::class).build())
         }
     }
-    fun FunSpec.Builder.addResourceConstructorParameters() = also {
+    private fun FunSpec.Builder.addResourceConstructorParameters() = also {
         resourceProperties.filter { it != logicalName }.forEach {
             addParameter(ParameterSpec.builder(it,typeFor(it).asNullable(), KModifier.OVERRIDE).defaultValue("null").addAnnotation(JsonIgnore::class).build())
         }
     }
 
-    fun TypeSpec.Builder.addBuilderResourceProperties() = also {
+    private fun TypeSpec.Builder.addBuilderResourceProperties() = also {
         resourceProperties.filter { it != logicalName }.forEach {
             addProperty(PropertySpec.builder(it, typeFor(it).asNullable()).initializer(it).build())
         }
     }
 
-    fun FunSpec.Builder.addResourceParameters() = also {
+    private fun FunSpec.Builder.addResourceParameters() = also {
         resourceProperties.filter { it != logicalName }.forEach {
             addParameter(ParameterSpec.builder(it, typeFor(it).asNullable()).defaultValue("null").build())
         }

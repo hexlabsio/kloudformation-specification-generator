@@ -40,6 +40,9 @@ data class KloudFormationTemplate(
                         it.value.dependsOn!!.forEach { generator.writeString(it) }
                         generator.writeEndArray()
                     }
+                    if(it.value.metadata != null){
+                        generator.writeObjectField("Metadata", it.value.metadata)
+                    }
                     if(!it.value.condition.isNullOrEmpty()){
                         generator.writeFieldName("Condition")
                         generator.writeString(it.value.condition)
