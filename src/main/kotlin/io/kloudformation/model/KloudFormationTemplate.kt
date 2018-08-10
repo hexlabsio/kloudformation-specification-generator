@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.kloudformation.KloudResource
 import io.kloudformation.Value
 import io.kloudformation.function.Intrinsic
+import io.kloudformation.function.Reference
 
 data class KloudFormationTemplate(
         val awsTemplateFormatVersion: String? = "2010-09-09",
@@ -128,6 +129,17 @@ data class KloudFormationTemplate(
         fun conditions(vararg conditions: Pair<String, Intrinsic>) = also { this.conditions += conditions }
         fun metadata(metadata: JsonNode) = metadata(Value.Of(metadata))
         fun metadata(metadata: Value<JsonNode>) = also { this.metadata = metadata }
+
+        companion object {
+            val awsAccountId = Reference<String>("AWS::AccountId")
+            val awsNotificationArns = Reference<List<String>>("AWS::NotificationARNs")
+            fun <T> awsNoValue() = Reference<T>("AWS::NoValue")
+            val awsPartition = Reference<String>("AWS::Partition")
+            val awsRegion = Reference<String>("AWS::Region")
+            val awsStackId = Reference<String>("AWS::StackId")
+            val awsStackName = Reference<String>("AWS::StackName")
+            val awsUrlSuffix = Reference<String>("AWS::URLSuffix")
+        }
     }
 
     companion object {
