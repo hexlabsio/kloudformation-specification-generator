@@ -20,9 +20,10 @@ data class KloudFormationTemplate(
         @JsonInclude(JsonInclude.Include.NON_NULL) val description: String? = null,
         @JsonInclude(JsonInclude.Include.NON_NULL) val metadata: Value<JsonNode>? = null,
         @JsonInclude(JsonInclude.Include.NON_NULL) val parameters: Map<String, Parameter<*>>? = null,
-        @JsonInclude(JsonInclude.Include.NON_NULL)  val mappings: Map<String, Map<String, Map<String, Mapping.Value<*>>>>? = null,
-        val conditions: Map<String, Intrinsic>? = null,
-        val resources: Resources
+        @JsonInclude(JsonInclude.Include.NON_NULL) val mappings: Map<String, Map<String, Map<String, Mapping.Value<*>>>>? = null,
+        @JsonInclude(JsonInclude.Include.NON_NULL) val conditions: Map<String, Intrinsic>? = null,
+        val resources: Resources,
+        @JsonInclude(JsonInclude.Include.NON_NULL) val outputs: Map<String, Output>? = null
 ){
     @JsonSerialize(using = Resources.Serializer::class)
     data class Resources( val resources: Map<String, KloudResource<*>>) {
@@ -77,6 +78,7 @@ data class KloudFormationTemplate(
             private val parameters: MutableList<Parameter<*>> = mutableListOf(),
             private val mappings: MutableList<Pair<String, Map<String, Map<String, Mapping.Value<*>>>>> = mutableListOf(),
             private val conditions: MutableList<Pair<String, Intrinsic>> = mutableListOf(),
+            private val outputs: MutableList<Pair<String, Output>> = mutableListOf(),
             private var metadata: Value<JsonNode>? = null,
             var currentDependees: List<String>? = null
     ){
@@ -88,6 +90,7 @@ data class KloudFormationTemplate(
                 parameters = if(parameters.isEmpty()) null else parameters.map { it.logicalName to it }.toMap(),
                 mappings = if(parameters.isEmpty()) null else mappings.toMap(),
                 conditions = if(conditions.isEmpty())null else conditions.toMap(),
+                outputs = if(outputs.isEmpty())null else outputs.toMap(),
                 metadata = metadata
         )
 
@@ -132,6 +135,8 @@ data class KloudFormationTemplate(
         fun conditions(vararg conditions: Pair<String, Intrinsic>) = also { this.conditions += conditions }
         fun metadata(metadata: JsonNode) = metadata(Value.Of(metadata))
         fun metadata(metadata: Value<JsonNode>) = also { this.metadata = metadata }
+
+        fun outputs(vararg outputs: Pair<String, Output>) = also { this.outputs += outputs }
 
         companion object {
             val awsAccountId = Reference<String>("AWS::AccountId")
