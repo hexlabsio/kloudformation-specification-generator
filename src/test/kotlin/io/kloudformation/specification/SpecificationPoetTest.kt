@@ -113,15 +113,15 @@ class SpecificationPoetTest{
             }
 
             @Test
-            fun `should have one non required property named propTwo of type 'Array of type SomeSubProperty'`() {
+            fun `should have one non required property named propTwo of type 'List of type SomeSubProperty'`() {
                 with(type.propertySpecs[1]) {
                     expect("propTwo") { name }
-                    expect(ParameterizedTypeName.get( ClassName.bestGuess("Array"), ClassName.bestGuess(SomeSubProperty().canonicalName)).asNullable()) { type }
+                    expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).asNullable()) { type }
                     expect("propTwo"){ initializer.toString() }
                 }
                 with(type.primaryConstructor!!.parameters[1]) {
                     expect("propTwo") { name }
-                    expect(ParameterizedTypeName.get( ClassName.bestGuess("Array"), ClassName.bestGuess(SomeSubProperty().canonicalName)).asNullable()) { type }
+                    expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).asNullable())  { type }
                     expect("null"){ defaultValue.toString() }
                 }
             }
@@ -138,7 +138,7 @@ class SpecificationPoetTest{
                             expect(1){ parameters.count() }
                             with(parameters[0]){
                                 expect("propOne") { name }
-                                expect(ParameterizedTypeName.get(Value::class.asTypeName(), String::class.asTypeName())) { type }
+                                expect(Value::class ofType String::class.asTypeName()) { type }
                             }
                             expect( "return Builder(propOne = propOne)" ){ body.toString().trim() }
                         }
@@ -181,10 +181,10 @@ class SpecificationPoetTest{
                 }
 
                 @Test
-                fun `should have one non required property named propTwo of type 'Array of type SomeSubProperty'`() {
+                fun `should have one non required property named propTwo of type 'List of type SomeSubProperty'`() {
                     with(builder.propertySpecs[0]) {
                         expect("propTwo") { name }
-                        expect(ParameterizedTypeName.get( ClassName.bestGuess("Array"), ClassName.bestGuess(SomeSubProperty().canonicalName)).asNullable()) { type }
+                        expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).asNullable()) { type }
                         expect("null"){ initializer.toString() }
                     }
                 }
@@ -200,7 +200,7 @@ class SpecificationPoetTest{
                         expect("propTwo") { name }
                         expect(1){ parameters.count() }
                         with(parameters[0]) {
-                            expect(ParameterizedTypeName.get(ClassName.bestGuess("Array"), ClassName.bestGuess(SomeSubProperty().canonicalName))) { type }
+                            expect(List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)) { type }
                         }
                         expect("return also { it.propTwo = propTwo }"){ body.toString().trim() }
                     }

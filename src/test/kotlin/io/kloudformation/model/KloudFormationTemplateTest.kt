@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.kloudformation.*
+import io.kloudformation.function.GetAZs
+import io.kloudformation.resource.ec2.instance
 import io.kloudformation.resource.testResource
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance

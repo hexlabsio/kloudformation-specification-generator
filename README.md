@@ -182,7 +182,7 @@ PolicyDocument lets you build fully type safe iam policies as shown in the examp
                  }
              }
      ){
-         policies(arrayOf(
+         policies(listOf(
                  Policy(
                          policyDocument {
                              statement(
@@ -485,31 +485,22 @@ val template = KloudFormationTemplate.create {
 ### Creation Policy
 ```kotlin
 val template = KloudFormationTemplate.create {
-    autoScalingGroup(
-            minSize = +"1",
-            maxSize = +"4",
-            creationPolicy = CreationPolicy(resourceSignal = CreationPolicy.ResourceSignal(count = Value.Of(3), timeout = +"PT15M"))
-    ){
-        availabilityZones(arrayOf("A", "B", "C"))
+    autoScalingGroup(minSize = +"1", maxSize = +"4"){
+        availabilityZones(GetAZs(+""))
     }
 }
-        
+
 // Result
-//AWSTemplateFormatVersion: "2010-09-09"
-//Resources:
-//  AutoScalingGroup:
-//    Type: "AWS::AutoScaling::AutoScalingGroup"
-//    CreationPolicy:
-//      ResourceSignal:
-//        Count: 3
-//        Timeout: "PT15M"
-//    Properties:
-//      MaxSize: "4"
-//      MinSize: "1"
-//      AvailabilityZones:
-//      - "A"
-//      - "B"
-//      - "C"
+// AWSTemplateFormatVersion: "2010-09-09"
+// Resources:
+//   AutoScalingGroup:
+//     Type: "AWS::AutoScaling::AutoScalingGroup"
+//     Properties:
+//       MaxSize: "4"
+//        MinSize: "1"
+//       AvailabilityZones:
+//         Fn::GetAZs:
+//         - ""
 ```
 
 ### Update Policy

@@ -7,6 +7,7 @@ import io.kloudformation.*
 import io.kloudformation.function.Att
 import io.kloudformation.model.KloudFormationTemplate
 import java.io.File
+import kotlin.reflect.KClass
 
 object SpecificationPoet {
 
@@ -231,7 +232,7 @@ object SpecificationPoet {
             .also {
                 if(property.primitiveItemType != null){
                     if(property.type == "Map") it.addCode("return also { it.$name = $name.orEmpty().map { it.key to %T(it.value) }.toMap() }\n", Value.Of::class)
-                    else it.addCode("return also { it.$name = $name.orEmpty().map { %T(it) }.toTypedArray() }\n", Value.Of::class)
+                    else it.addCode("return also { it.$name = %T($name) }\n", Value.Of::class)
                 }
                 else if(property.primitiveType != null){
                     it.addCode("return also { it.$name = %T($name) }\n", Value.Of::class)
@@ -300,9 +301,12 @@ object SpecificationPoet {
         !primitiveItemType.isNullOrEmpty() -> {
             if (type.equals("Map"))
                 ParameterizedTypeName.get(Map::class.asClassName(), String::class.asClassName(), valueTypeName(primitiveItemType!!, wrapped))
-            else ParameterizedTypeName.get(ClassName.bestGuess("Array"), valueTypeName(primitiveItemType!!, wrapped))
+            else {
+                val arrayOfValueOfType = List::class ofType valueTypeName(primitiveItemType!!, true)
+                if(wrapped) Value::class ofType arrayOfValueOfType else arrayOfValueOfType
+            }
         }
-        !itemType.isNullOrEmpty() -> ParameterizedTypeName.get(ClassName.bestGuess("Array"), ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, itemType.toString())) + "." + itemType))
+        !itemType.isNullOrEmpty() -> List::class ofType ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, itemType.toString())) + "." + itemType)
         else -> ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, type.toString())) + "." + type)
     }
 
@@ -313,3 +317,6 @@ object SpecificationPoet {
 
     private fun escape(name: String) = name.replace(".", "")
 }
+
+infix fun KClass<*>.ofType(type: TypeName) = ParameterizedTypeName.get(this.asClassName(), type)
+infix fun ClassName.ofType(type: TypeName) = ParameterizedTypeName.get(this, type)
