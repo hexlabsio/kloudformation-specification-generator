@@ -11,18 +11,18 @@ import kotlin.reflect.KClass
 
 object SpecificationPoet {
 
-    private val logicalName = "logicalName"
-    private val dependsOn = "dependsOn"
-    private val condition = "condition"
-    private val metadata = "metadata"
-    private val creationPolicy = "creationPolicy"
-    private val updatePolicy = "updatePolicy"
-    private val deletionPolicy = "deletionPolicy"
+    private const val logicalName = "logicalName"
+    private const val dependsOn = "dependsOn"
+    private const val condition = "condition"
+    private const val metadata = "metadata"
+    private const val creationPolicy = "creationPolicy"
+    private const val updatePolicy = "updatePolicy"
+    private const val deletionPolicy = "deletionPolicy"
 
     private val resourceProperties = listOf(logicalName, dependsOn, condition, metadata, creationPolicy, updatePolicy, deletionPolicy)
     private fun typeFor(resource: String) = when(resource){
-        dependsOn -> ParameterizedTypeName.get(List::class, String::class)
-        metadata -> ParameterizedTypeName.get(Value::class, JsonNode::class)
+        dependsOn -> List::class ofType String::class
+        metadata -> Value::class ofType JsonNode::class
         creationPolicy -> CreationPolicy::class.asTypeName()
         updatePolicy -> UpdatePolicy::class.asTypeName()
         else -> String::class.asTypeName()
@@ -96,7 +96,7 @@ object SpecificationPoet {
     }
 
     fun generate(specification: Specification){
-       generateSpecs(specification).forEach { it.writeTo(File(System.getProperty("user.dir") + "/target/generated-sources")) }
+        generateSpecs(specification).forEach { it.writeTo(File(System.getProperty("user.dir") + "/target/generated-sources")) }
     }
 
     private fun buildFile(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
@@ -108,20 +108,20 @@ object SpecificationPoet {
     private fun builderClassNameFrom(type: String) = ClassName.bestGuess("$type.Builder")
 
     private fun builderFunction(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) = FunSpec.let {
-            val name = getClassName(typeName)
-            it.builder(name.decapitalize()).also { func ->
-                if (isResource) {
-                    func.addCode( "return add( builder( $name.create(${paramListFrom(propertyInfo, true, true, name)}) ).build() )\n" )
-                } else {
-                    func.addCode( "return builder( $name.create(${paramListFrom(propertyInfo, false)}) ).build()\n" )
-                }
-                propertyInfo.properties.sorted().filter { it.value.required }.map { func.addParameter(buildParameter(types, typeName, it.key, it.value)) }
-                if (isResource) func.addParameters(builderFunctionResourceParameters)
-                func.addParameter(ParameterSpec.builder("builder", LambdaTypeName.get(builderClassNameFrom(name), returnType = builderClassNameFrom(name))).defaultValue("{ this }").build())
+        val name = getClassName(typeName)
+        it.builder(name.decapitalize()).also { func ->
+            if (isResource) {
+                func.addCode( "return add( builder( $name.create(${paramListFrom(propertyInfo, true, true, name)}) ).build() )\n" )
+            } else {
+                func.addCode( "return builder( $name.create(${paramListFrom(propertyInfo, false)}) ).build()\n" )
             }
+            propertyInfo.properties.sorted().filter { it.value.required }.map { func.addParameter(buildParameter(types, typeName, it.key, it.value)) }
+            if (isResource) func.addParameters(builderFunctionResourceParameters)
+            func.addParameter(ParameterSpec.builder("builder", LambdaTypeName.get(builderClassNameFrom(name), returnType = builderClassNameFrom(name))).defaultValue("{ this }").build())
+        }
                 .receiver(KloudFormationTemplate.Builder::class)
                 .build()
-        }
+    }
 
 
     private fun buildType(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
@@ -131,9 +131,9 @@ object SpecificationPoet {
                     .also {
                         if(isResource)
                             it
-                            .superclass(ParameterizedTypeName.get(KloudResource::class.asClassName(),String::class.asTypeName()))
-                            .addSuperclassConstructorParameter("kloudResourceType = %S", typeName)
-                            .addResourceConstructorParameters()
+                                    .superclass(KloudResource::class ofType String::class)
+                                    .addSuperclassConstructorParameter("kloudResourceType = %S", typeName)
+                                    .addResourceConstructorParameters()
                     }
                     .addFunctions(functionsFrom(types, typeName, propertyInfo.attributes.orEmpty()))
                     .addProperties(propertyInfo.properties.sorted().map { buildProperty(types, typeName, it.key, it.value) })
@@ -210,10 +210,10 @@ object SpecificationPoet {
         return nameList.foldIndexed(""){
             index, acc, name -> acc + (if(index != 0) ", " else "") + "$name = " +
                 (
-                    if(name == dependsOn && addCurrentDependee) "$name ?: currentDependees"
-                    else if(name == logicalName && !specialLogicalName.isNullOrEmpty()) "$name ?: allocateLogicalName(\"$specialLogicalName\")"
-                    else name
-                )
+                        if(name == dependsOn && addCurrentDependee) "$name ?: currentDependees"
+                        else if(name == logicalName && !specialLogicalName.isNullOrEmpty()) "$name ?: allocateLogicalName(\"$specialLogicalName\")"
+                        else name
+                        )
         }
     }
 
@@ -240,16 +240,24 @@ object SpecificationPoet {
             }
             .build()
 
-    private fun childParamsWithTypes(parameters: Collection<String>) = parameters.fold(""){ acc, parameter -> acc + parameter + ": %T, " }
     private fun childParams(parameters: Collection<String>) = parameters.foldIndexed(""){ index, acc, parameter -> acc + (if(index != 0) ", " else "") + parameter }
 
     private fun typeSetterFunction(name: String, propertyType: String, typeName: String, typeMappings:  List<TypeInfo>): FunSpec{
         val parent = (typeMappings.find { it.awsTypeName == typeName }!!.properties.find { it.name == propertyType.decapitalize() }!!.typeName as ClassName)
         val requiredProperties = typeMappings.find { it.canonicalName == parent.canonicalName }!!.properties.filter { !it.typeName.nullable }
         val propertyNames = requiredProperties.map { it.name }
-        val propertyTypes = requiredProperties.map { it.typeName }
-        return FunSpec.builder("_" + name.decapitalize()) //TODO get LambdaTypeName working here, had to hack a stinking function to stringify my own function
-                .addCode("return \"\"\nfun ${name.decapitalize()}(${childParamsWithTypes(propertyNames)} builder: ${parent.simpleName()}.Builder.() -> ${parent.simpleName()}.Builder = { this }) = ${name.decapitalize()}(${parent.simpleName()}.create(${childParams(propertyNames)}).builder().build())", *propertyTypes.toTypedArray())
+        return FunSpec.builder(name.decapitalize())
+                .addParameters(requiredProperties.map { ParameterSpec.builder(it.name,it.typeName).build() })
+                .addParameter(
+                        ParameterSpec.builder(
+                                name = "builder",
+                                type = LambdaTypeName.get(
+                                        receiver = ClassName.bestGuess("${parent.simpleName()}.Builder"),
+                                        returnType = ClassName.bestGuess("${parent.simpleName()}.Builder")
+                                )
+                        ).defaultValue("{ this }").build()
+                )
+                .addCode("return ${name.decapitalize()}(${parent.simpleName()}.create(${childParams(propertyNames)}).builder().build())\n")
                 .build()
     }
 
@@ -284,8 +292,9 @@ object SpecificationPoet {
 
     private fun primitiveTypeName(primitiveType: String) = ClassName.bestGuess(primitiveType.replace("Json", "com.fasterxml.jackson.databind.JsonNode").replace("Timestamp", "java.time.Instant").replace("Integer", "kotlin.Int").replace("String", "kotlin.String"))
 
-    private fun valueTypeName(primitiveType: String, wrapped: Boolean) = if(wrapped) ParameterizedTypeName.get(Value::class.asClassName(), primitiveTypeName(primitiveType))
-    else primitiveTypeName(primitiveType)
+    private fun valueTypeName(primitiveType: String, wrapped: Boolean) =
+            if(wrapped) Value::class ofType primitiveTypeName(primitiveType)
+            else primitiveTypeName(primitiveType)
 
     private fun getType(types: Set<String>, classTypeName: String, attribute: Attribute, wrapped: Boolean = true) =
             getType(types, classTypeName, attribute.primitiveType, attribute.primitiveItemType, null, attribute.type, wrapped)
@@ -295,12 +304,11 @@ object SpecificationPoet {
 
     private fun getType(types: Set<String>, classTypeName: String, primitiveType: String?, primitiveItemType: String?, itemType: String? = null, type: String? = null, wrapped: Boolean = true) = when {
         !primitiveType.isNullOrEmpty() -> {
-            if(wrapped)ParameterizedTypeName.get(Value::class.asClassName(), primitiveTypeName(primitiveType!!))
+            if(wrapped) Value::class ofType  primitiveTypeName(primitiveType!!)
             else primitiveTypeName(primitiveType!!)
         }
         !primitiveItemType.isNullOrEmpty() -> {
-            if (type.equals("Map"))
-                ParameterizedTypeName.get(Map::class.asClassName(), String::class.asClassName(), valueTypeName(primitiveItemType!!, wrapped))
+            if (type.equals("Map")) Map::class.ofTypes(String::class.asTypeName(), valueTypeName(primitiveItemType!!, wrapped))
             else {
                 val arrayOfValueOfType = List::class ofType valueTypeName(primitiveItemType!!, true)
                 if(wrapped) Value::class ofType arrayOfValueOfType else arrayOfValueOfType
@@ -318,5 +326,7 @@ object SpecificationPoet {
     private fun escape(name: String) = name.replace(".", "")
 }
 
+fun KClass<*>.ofTypes(vararg types: TypeName) = ParameterizedTypeName.get(this.asClassName(),*types.toList().toTypedArray())
 infix fun KClass<*>.ofType(type: TypeName) = ParameterizedTypeName.get(this.asClassName(), type)
+infix fun KClass<*>.ofType(type: KClass<*>) = this.asClassName() ofType(type.asTypeName())
 infix fun ClassName.ofType(type: TypeName) = ParameterizedTypeName.get(this, type)
