@@ -479,3 +479,85 @@ val template = KloudFormationTemplate.create {
 //     Properties:
 //       ServiceToken: "arn:aws::xxxx:xxx"
 ```
+
+## Lifecycle Policies
+
+### Creation Policy
+```kotlin
+val template = KloudFormationTemplate.create {
+    autoScalingGroup(
+            minSize = +"1",
+            maxSize = +"4",
+            creationPolicy = CreationPolicy(resourceSignal = CreationPolicy.ResourceSignal(count = Value.Of(3), timeout = +"PT15M"))
+    ){
+        availabilityZones(arrayOf("A", "B", "C"))
+    }
+}
+        
+// Result
+//AWSTemplateFormatVersion: "2010-09-09"
+//Resources:
+//  AutoScalingGroup:
+//    Type: "AWS::AutoScaling::AutoScalingGroup"
+//    CreationPolicy:
+//      ResourceSignal:
+//        Count: 3
+//        Timeout: "PT15M"
+//    Properties:
+//      MaxSize: "4"
+//      MinSize: "1"
+//      AvailabilityZones:
+//      - "A"
+//      - "B"
+//      - "C"
+```
+
+### Update Policy
+```kotlin
+val template = KloudFormationTemplate.create {
+
+    alias(
+            functionName = lambda.ref(),
+            functionVersion = lambdaVersion2.Version(),
+            name = +"MyAlias",
+            updatePolicy = UpdatePolicy(
+                    codeDeployLambdaAliasUpdate = CodeDeployLambdaAliasUpdate(
+                            applicationName = application.ref(),
+                            deploymentGroupName = deploymentGroup.ref()
+                    )
+            )
+    )
+}
+
+// Result
+//  Alias:
+//    Type: "AWS::Lambda::Alias"
+//    UpdatePolicy:
+//      CodeDeployLambdaAliasUpdate:
+//        ApplicationName:
+//          Ref: "Topic"
+//        DeploymentGroupName:
+//          Ref: "Topic3"
+//    Properties:
+//      FunctionName:
+//        Ref: "Topic2"
+//      FunctionVersion:
+//        Fn::GetAtt:
+//        - "Version"
+//        - "Version"
+//      Name: "MyAlias"
+```
+
+### Deletion Policy
+```kotlin
+val template = KloudFormationTemplate.create {
+    bucket(deletionPolicy = DeletionPolicy.RETAIN.policy)
+}
+
+// Result
+// AWSTemplateFormatVersion: "2010-09-09"
+// Resources:
+//   Bucket:
+//     Type: "AWS::S3::Bucket"
+//     DeletionPolicy: "Retain"
+```

@@ -10,7 +10,10 @@ open class KloudResource<T>(
         @JsonIgnore open var kloudResourceType: String = "AWS::CustomResource",
         @JsonIgnore open val dependsOn: List<String>? = null,
         @JsonIgnore open val condition: String? = null,
-        @JsonIgnore open val metadata: Value<JsonNode>? = null
+        @JsonIgnore open val metadata: Value<JsonNode>? = null,
+        @JsonIgnore open val updatePolicy: UpdatePolicy? = null,
+        @JsonIgnore open val creationPolicy: CreationPolicy? = null,
+        @JsonIgnore open val deletionPolicy: String? = null
 ){
 
     fun ref() = Reference<T>(logicalName)

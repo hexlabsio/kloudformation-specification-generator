@@ -3,8 +3,7 @@ package io.kloudformation.specification
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.JsonNode
 import com.squareup.kotlinpoet.*
-import io.kloudformation.KloudResource
-import io.kloudformation.Value
+import io.kloudformation.*
 import io.kloudformation.function.Att
 import io.kloudformation.model.KloudFormationTemplate
 import java.io.File
@@ -15,11 +14,16 @@ object SpecificationPoet {
     private val dependsOn = "dependsOn"
     private val condition = "condition"
     private val metadata = "metadata"
+    private val creationPolicy = "creationPolicy"
+    private val updatePolicy = "updatePolicy"
+    private val deletionPolicy = "deletionPolicy"
 
-    private val resourceProperties = listOf(logicalName, dependsOn, condition, metadata)
+    private val resourceProperties = listOf(logicalName, dependsOn, condition, metadata, creationPolicy, updatePolicy, deletionPolicy)
     private fun typeFor(resource: String) = when(resource){
         dependsOn -> ParameterizedTypeName.get(List::class, String::class)
         metadata -> ParameterizedTypeName.get(Value::class, JsonNode::class)
+        creationPolicy -> CreationPolicy::class.asTypeName()
+        updatePolicy -> UpdatePolicy::class.asTypeName()
         else -> String::class.asTypeName()
     }
     private fun builderPropertyTypeFor(resourceProperty: String) = typeFor(resourceProperty).let { if(resourceProperty == logicalName) it else it.asNullable() }

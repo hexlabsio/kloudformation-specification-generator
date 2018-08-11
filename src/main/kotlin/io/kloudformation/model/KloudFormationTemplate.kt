@@ -48,6 +48,9 @@ data class KloudFormationTemplate(
                         generator.writeFieldName("Condition")
                         generator.writeString(it.value.condition)
                     }
+                    if(it.value.creationPolicy != null) generator.writeObjectField("CreationPolicy", it.value.creationPolicy)
+                    if(it.value.updatePolicy != null) generator.writeObjectField("UpdatePolicy", it.value.updatePolicy)
+                    if(it.value.deletionPolicy != null) generator.writeObjectField("DeletionPolicy", it.value.deletionPolicy)
                     if(codec is ObjectMapper){
                         val props = codec.valueToTree<JsonNode>(it.value)
                         if(props.size() != 0) {
