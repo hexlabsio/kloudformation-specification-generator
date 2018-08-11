@@ -8,16 +8,14 @@ import io.kloudformation.Value
 
 @JsonSerialize(using = GetAZs.Serializer::class)
 data class GetAZs(val region: GetAZs.Value<String>):
-        io.kloudformation.Value<List<Value<String>>>, Select.ObjectValue<List<String>>, SplitValue<List<String>>, SubValue<List<String>>, IfValue<List<String>>{
+        Value<List<Value<String>>>, Select.ObjectValue<List<Select.ObjectValue<String>>>, SplitValue<List<String>>, SubValue<List<String>>, IfValue<List<String>>{
 
     interface Value<T>
 
     class Serializer: StdSerializer<GetAZs>(GetAZs::class.java){
         override fun serialize(item: GetAZs, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeStartObject()
-            generator.writeArrayFieldStart("Fn::GetAZs")
-            generator.writeObject(item.region)
-            generator.writeEndArray()
+            generator.writeObjectField("Fn::GetAZs", item.region)
             generator.writeEndObject()
         }
     }

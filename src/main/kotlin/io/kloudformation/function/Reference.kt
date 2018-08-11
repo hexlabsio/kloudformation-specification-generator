@@ -6,6 +6,7 @@ open class Reference<T>(val ref: String)
     :   Value<T>,
         Cidr.Value<T>,
         Att.Value<T>,
+        Select.IndexValue<T>,
         Select.ObjectValue<T>,
         FindInMapValue<T>,
         GetAZs.Value<T>,
