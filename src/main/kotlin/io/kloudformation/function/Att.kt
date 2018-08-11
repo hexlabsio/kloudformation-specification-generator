@@ -8,7 +8,7 @@ import io.kloudformation.Value
 
 @JsonSerialize(using = Att.Serializer::class)
 data class Att<T>(val reference: String, val attribute: Att.Value<String>):
-        io.kloudformation.Value<T>, Select.ObjectValue<T>, SplitValue<T>, SubValue<T>, IfValue<T>{
+        io.kloudformation.Value<T>, Select.ObjectValue<T>, SplitValue<T>, SubValue, IfValue<T>{
 
     interface Value<T>
 

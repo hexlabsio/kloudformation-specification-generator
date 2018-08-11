@@ -8,7 +8,7 @@ import io.kloudformation.Value
 
 @JsonSerialize(using = FnBase64.Serializer::class)
 data class FnBase64(val valueToEncode: Value<String>):
-        io.kloudformation.Value<String>, ImportValue.Value<String>, SplitValue<String>, SubValue<String>, IfValue<String>{
+        io.kloudformation.Value<String>, ImportValue.Value<String>, SplitValue<String>, SubValue, IfValue<String>{
     class Serializer : StdSerializer<FnBase64>(FnBase64::class.java) {
         override fun serialize(item: FnBase64, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeStartObject()

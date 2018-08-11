@@ -12,7 +12,7 @@ open class Reference<T>(val ref: String)
         GetAZs.Value<T>,
         ImportValue.Value<T>,
         SplitValue<T>,
-        SubValue<T>,
+        SubValue,
         IfValue<T>,
         ConditionalValue<T>,
         EqualsValue

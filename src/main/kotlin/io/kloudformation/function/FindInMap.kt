@@ -13,7 +13,16 @@ data class FindInMap<T>(
         val mapName: FindInMapValue<String>,
         val topLevelKey: FindInMapValue<String>,
         val secondLevelKey: FindInMapValue<String>
-): io.kloudformation.Value<T>, FindInMapValue<T>, ImportValue.Value<T>, SplitValue<T>, Select.IndexValue<T>, Select.ObjectValue<T>, SubValue<T>, IfValue<T>, ConditionalValue<T>{
+):      Value<T>,
+        FindInMapValue<T>,
+        ImportValue.Value<T>,
+        SplitValue<T>,
+        Select.IndexValue<T>,
+        Select.ObjectValue<T>,
+        SubValue,
+        IfValue<T>,
+        ConditionalValue<T>
+{
     class Serializer: StdSerializer<FindInMap<*>>(FindInMap::class.java){
         override fun serialize(item: FindInMap<*>, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeStartObject()

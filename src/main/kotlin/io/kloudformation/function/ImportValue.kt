@@ -8,7 +8,7 @@ import io.kloudformation.Value
 
 @JsonSerialize(using = ImportValue.Serializer::class)
 data class ImportValue<T>(val sharedValueToImport: ImportValue.Value<String>):
-        io.kloudformation.Value<T>, SubValue<T>{
+        io.kloudformation.Value<T>, SubValue{
 
     interface Value<T>
 

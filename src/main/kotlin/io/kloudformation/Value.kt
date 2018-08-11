@@ -18,7 +18,7 @@ interface Value<out T>{
             GetAZs.Value<T>,
             ImportValue.Value<T>,
             SplitValue<T>,
-            SubValue<T>,
+            SubValue,
             IfValue<T>,
             EqualsValue,
             ConditionalValue<T>,
