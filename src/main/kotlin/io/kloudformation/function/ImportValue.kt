@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import io.kloudformation.Value
 
 @JsonSerialize(using = ImportValue.Serializer::class)
 data class ImportValue<T>(val sharedValueToImport: ImportValue.Value<String>):
