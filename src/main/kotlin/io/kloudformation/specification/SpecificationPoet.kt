@@ -101,11 +101,11 @@ object SpecificationPoet {
         generateSpecs(specification).forEach { it.writeTo(File(System.getProperty("user.dir") + "/target/generated-sources")) }
     }
 
-    data class Info(val type: String, val name: String, val required: Map<String, String>, val notRequired: Map<String, String>)
+    data class Info(val type: String, val name: String, val resource: Boolean, val required: Map<String, String>, val notRequired: Map<String, String>)
 
-    private fun infoFrom(types: Set<String>, typeName: String, propertyInfo: PropertyInfo): Info{
+    private fun infoFrom(types: Set<String>, resource: Boolean, typeName: String, propertyInfo: PropertyInfo): Info{
         val properties = propertyInfo.properties.run { filter { it.value.required } to filter { !it.value.required } }
-        return Info(typeName, getClassName(typeName),
+        return Info(typeName, getClassName(typeName), resource,
                 properties.first.map { it.key.decapitalize() to awsNameFor(getType(types, typeName, it.value).toString()) }.toMap(),
                 properties.second.map { it.key.decapitalize() to awsNameFor(getType(types, typeName, it.value).toString()) }.toMap()
         )
@@ -124,7 +124,9 @@ object SpecificationPoet {
     else type
 
     private fun libraryInfoFrom(specification: Specification) = (specification.propertyTypes + specification.resourceTypes).let { types ->
-        jacksonObjectMapper().writeValueAsString( types.map { it.key to infoFrom(types.keys, it.key, it.value) }.toMap())
+        jacksonObjectMapper().writeValueAsString( (specification.propertyTypes.map { it.key to infoFrom(types.keys, false, it.key, it.value) } +
+                specification.resourceTypes.map { it.key to infoFrom(types.keys, true, it.key, it.value) }).toMap()
+        )
     }
 
     private fun buildFile(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
