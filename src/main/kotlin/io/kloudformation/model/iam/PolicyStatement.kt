@@ -34,11 +34,15 @@ data class PolicyStatement(
                     item.resource.resources.forEach { generator.writeObject(it) }
                 generator.writeEndArray()
             }
-            if(item.principal != null && item.principal.principals.isNotEmpty()){
+            if(item.principal != null){
                 generator.writeObjectFieldStart(if(item.principal is NotPrincipal) "NotPrincipal" else "Principal")
-                when(item.principal.principals.keys.first()){
+                when(item.principal.principals.first){
                     PrincipalType.ALL -> generator.writeString("*")
-                    else -> item.principal.principals.forEach { generator.writeObjectField(it.key.principal, it.value) }
+                    else -> {
+                        generator.writeArrayFieldStart(item.principal.principals.first.principal)
+                        item.principal.principals.second.forEach { generator.writeObject(it) }
+                        generator.writeEndArray()
+                    }
                 }
                 generator.writeEndObject()
             }
@@ -60,15 +64,15 @@ data class PolicyStatement(
     }
 
     data class Builder(val effect:IamPolicyEffect = IamPolicyEffect.Allow, val action: Action , val resource: Resource? = null, val sid: String? = null){
-        var principals: MutableMap<PrincipalType, Value<String>> = mutableMapOf()
+        var principal: Pair<PrincipalType, List<Value<String>>>? = null
         val conditionals: MutableList<Conditional<*,*>> = mutableListOf()
         var notPrincipal: Boolean = false
 
-        fun principal(principalType: PrincipalType, principal: Value<String>, notPrincipal: Boolean = false) =  also {
-            principals[principalType] = principal
+        fun principal(principalType: PrincipalType, principal: List<Value<String>>, notPrincipal: Boolean = false) =  also {
+            this.principal = principalType to principal
             this.notPrincipal = notPrincipal
         }
-        fun notPrincipal(principalType: PrincipalType, principal: Value<String>) = principal(principalType, principal, true)
+        fun notPrincipal(principalType: PrincipalType, principal: List<Value<String>>) = principal(principalType, principal, true)
 
         fun <S, T: ConditionOperator<S>> condition(operator: T, key: ConditionKey<S>, conditions: List<String>) = also { conditionals.add(Conditional(operator, key, conditions)) }
 
@@ -77,7 +81,7 @@ data class PolicyStatement(
                 resource = resource,
                 effect = effect,
                 sid = sid,
-                principal = if(principals.isEmpty()) null else (if(notPrincipal)NotPrincipal(principals) else Principal(principals)),
+                principal = principal?.let { (if(notPrincipal)NotPrincipal(principal!!) else Principal(principal!!)) },
                 condition = if(conditionals.isEmpty()) null else Condition(conditionals)
         )
     }

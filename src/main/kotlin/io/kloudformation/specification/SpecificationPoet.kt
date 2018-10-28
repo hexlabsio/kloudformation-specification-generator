@@ -2,6 +2,7 @@ package io.kloudformation.specification
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.squareup.kotlinpoet.*
 import io.kloudformation.*
 import io.kloudformation.function.Att
@@ -96,7 +97,36 @@ object SpecificationPoet {
     }
 
     fun generate(specification: Specification){
+        File(System.getProperty("user.dir") + "/src/main/resources/info.json").writeText(libraryInfoFrom(specification))
         generateSpecs(specification).forEach { it.writeTo(File(System.getProperty("user.dir") + "/target/generated-sources")) }
+    }
+
+    data class Info(val type: String, val name: String, val resource: Boolean, val required: Map<String, String>, val notRequired: Map<String, String>)
+
+    private fun infoFrom(types: Set<String>, resource: Boolean, typeName: String, propertyInfo: PropertyInfo): Info{
+        val properties = propertyInfo.properties.run { filter { it.value.required } to filter { !it.value.required } }
+        return Info(typeName, getClassName(typeName), resource,
+                properties.first.map { it.key.decapitalize() to awsNameFor(getType(types, typeName, it.value).toString()) }.toMap(),
+                properties.second.map { it.key.decapitalize() to awsNameFor(getType(types, typeName, it.value).toString()) }.toMap()
+        )
+    }
+
+    private fun awsNameFor(type: String): String = if(type.startsWith("io.kloudformation.property.")){
+        val parts = type.substringAfter("io.kloudformation.property.")
+        val firstPart = parts.substringBefore(".")
+        val rest = parts.substringAfter("$firstPart.")
+                .split(".").foldIndexed(firstPart.capitalize() + "::"){ index, acc, it ->
+                    "$acc${if(index > 0)"." else "" }${it.capitalize()}"
+                }
+        "AWS::$rest"
+    } else if(type.startsWith("kotlin.collections.List<io.kloudformation.property."))
+        "List<${awsNameFor(type.substringAfter("kotlin.collections.List<").substringBeforeLast(">"))}>"
+    else type
+
+    private fun libraryInfoFrom(specification: Specification) = (specification.propertyTypes + specification.resourceTypes).let { types ->
+        jacksonObjectMapper().writeValueAsString( (specification.propertyTypes.map { it.key to infoFrom(types.keys, false, it.key, it.value) } +
+                specification.resourceTypes.map { it.key to infoFrom(types.keys, true, it.key, it.value) }).toMap()
+        )
     }
 
     private fun buildFile(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
