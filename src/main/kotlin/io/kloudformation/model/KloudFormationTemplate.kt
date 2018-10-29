@@ -14,6 +14,7 @@ import io.kloudformation.KloudResource
 import io.kloudformation.Value
 import io.kloudformation.function.Intrinsic
 import io.kloudformation.function.Reference
+import kotlin.math.log
 
 data class KloudFormationTemplate(
         val awsTemplateFormatVersion: String? = "2010-09-09",
@@ -138,6 +139,7 @@ data class KloudFormationTemplate(
             this.mappings += mappings
         }
         fun conditions(vararg conditions: Pair<String, Intrinsic>) = also { this.conditions += conditions }
+        fun condition(logicalName: String, predicate: Intrinsic) = let { this.conditions += logicalName to predicate; logicalName }
         fun metadata(metadata: JsonNode) = metadata(Value.Of(metadata))
         fun metadata(metadata: Value<JsonNode>) = also { this.metadata = metadata }
 
