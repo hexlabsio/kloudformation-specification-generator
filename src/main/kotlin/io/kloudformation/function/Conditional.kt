@@ -33,13 +33,16 @@ interface Conditional: ConditionalValue<Boolean>, Value<Boolean>{
                     generator.writeObject(item.a)
                     generator.writeObject(item.b)
                 }
+                is Condition -> {
+                    generator.writeObjectField("Condition", item.logicalName)
+                }
             }
             generator.writeEndArray()
             generator.writeEndObject()
         }
     }
 }
-
+data class Condition(val logicalName: String): ConditionalValue<Boolean>, Conditional
 data class And(val a: ConditionalValue<Boolean>, val b: ConditionalValue<Boolean>): Conditional
 data class Or(val a: ConditionalValue<Boolean>, val b: ConditionalValue<Boolean>): Conditional
 
