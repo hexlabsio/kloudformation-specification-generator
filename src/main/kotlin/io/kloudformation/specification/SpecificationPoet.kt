@@ -114,11 +114,13 @@ object SpecificationPoet {
     private fun awsNameFor(type: String): String = if(type.startsWith("io.kloudformation.property.")){
         val parts = type.substringAfter("io.kloudformation.property.")
         val firstPart = parts.substringBefore(".")
-        val rest = parts.substringAfter("$firstPart.")
-                .split(".").foldIndexed(firstPart.capitalize() + "::"){ index, acc, it ->
-                    "$acc${if(index > 0)"." else "" }${it.capitalize()}"
-                }
-        "AWS::$rest"
+        if(firstPart == "Tag") "Tag" else {
+            val rest = parts.substringAfter("$firstPart.")
+                    .split(".").foldIndexed(firstPart.capitalize() + "::") { index, acc, it ->
+                        "$acc${if (index > 0) "." else ""}${it.capitalize()}"
+                    }
+            "AWS::$rest"
+        }
     } else if(type.startsWith("kotlin.collections.List<io.kloudformation.property."))
         "List<${awsNameFor(type.substringAfter("kotlin.collections.List<").substringBeforeLast(">"))}>"
     else type
