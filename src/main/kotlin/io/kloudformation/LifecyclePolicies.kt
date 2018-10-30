@@ -21,7 +21,8 @@ data class UpdatePolicy(
     @JsonInclude(JsonInclude.Include.NON_NULL) val autoScalingRollingUpdate: AutoScalingRollingUpdate? = null,
     @JsonInclude(JsonInclude.Include.NON_NULL) val autoScalingReplacingUpdate: AutoScalingReplacingUpdate? = null,
     @JsonInclude(JsonInclude.Include.NON_NULL) val autoScalingScheduledAction : AutoScalingScheduledAction ? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val codeDeployLambdaAliasUpdate : CodeDeployLambdaAliasUpdate? = null
+    @JsonInclude(JsonInclude.Include.NON_NULL) val codeDeployLambdaAliasUpdate : CodeDeployLambdaAliasUpdate? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) val useOnlineResharding : Value<Boolean>? = null
 )
 
 data class AutoScalingReplacingUpdate(
