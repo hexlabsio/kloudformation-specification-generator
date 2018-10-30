@@ -135,6 +135,20 @@ data class KloudFormationTemplate(
                           noEcho: String? = null
         ) = Parameter<T>(logicalName,type, allowedPattern, allowedValues, constraintDescription, default, description, maxLength, maxValue, minLength, minValue, noEcho).also { parameters.add(it) }
 
+        fun <T> parameter(logicalName: String,
+                          type: ParameterType<T>,
+                          allowedPattern: String? = null,
+                          allowedValues: List<String>? = null,
+                          constraintDescription: String? = null,
+                          default: String? = null,
+                          description: String? = null,
+                          maxLength: String? = null,
+                          maxValue: String? = null,
+                          minLength: String? = null,
+                          minValue: String? = null,
+                          noEcho: String? = null
+        ): Parameter<T> = parameter(logicalName,type.type,allowedPattern, allowedValues, constraintDescription, default, description, maxLength, maxValue, minLength, minValue, noEcho)
+
         fun <T: Any> mappings(vararg mappings: Pair<String, Map<String, Map<String, Value<T>>>>) = also {
             this.mappings += mappings
         }
