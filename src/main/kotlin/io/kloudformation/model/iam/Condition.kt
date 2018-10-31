@@ -1,11 +1,13 @@
 package io.kloudformation.model.iam
 
+import io.kloudformation.Value
+
 
 data class Condition(val conditions: List<Conditional<*,*>>)
 
-class Conditional<S, out T: ConditionOperator<S>>(val operator: T, val conditions: Map<ConditionKey<S>, List<String>>)
+class Conditional<S, out T: ConditionOperator<S>>(val operator: T, val conditions: Map<ConditionKey<S>, List<Value<String>>>)
 
-fun conditional(operator: String, conditions: Map<String, List<String>>) = Conditional(ConditionOperator(operator), conditions.map { ConditionKey<Any>(it.key) to it.value }.toMap())
+fun conditional(operator: String, conditions: Map<String, List<Value<String>>>) = Conditional(ConditionOperator(operator), conditions.map { ConditionKey<Any>(it.key) to it.value }.toMap())
 
 
 open class ConditionOperator<T>(val operation: String)

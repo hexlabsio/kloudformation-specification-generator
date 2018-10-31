@@ -74,8 +74,8 @@ data class PolicyStatement(
         }
         fun notPrincipal(principalType: PrincipalType, principal: List<Value<String>>) = principal(principalType, principal, true)
 
-        fun <S, T: ConditionOperator<S>> condition(operator: T, conditions: Map<ConditionKey<S>,List<String>>) = also { conditionals.add(Conditional(operator, conditions)) }
-        fun condition(operator: String, conditions: Map<String, List<String>>) = also { conditionals.add(conditional(operator, conditions)) }
+        fun <S, T: ConditionOperator<S>> condition(operator: T, conditions: Map<ConditionKey<S>,List<Value<String>>>) = also { conditionals.add(Conditional(operator, conditions)) }
+        fun condition(operator: String, conditions: Map<String, List<Value<String>>>) = also { conditionals.add(conditional(operator, conditions)) }
 
         fun build() = PolicyStatement(
                 action = action,
