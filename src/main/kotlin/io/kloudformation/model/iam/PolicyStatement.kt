@@ -35,16 +35,17 @@ data class PolicyStatement(
                 generator.writeEndArray()
             }
             if(item.principal != null){
-                generator.writeObjectFieldStart(if(item.principal is NotPrincipal) "NotPrincipal" else "Principal")
+                val itemName = if(item.principal is NotPrincipal) "NotPrincipal" else "Principal"
                 when(item.principal.principals.first){
-                    PrincipalType.ALL -> generator.writeString("*")
+                    PrincipalType.ALL -> generator.writeStringField(itemName, "*")
                     else -> {
+                        generator.writeObjectFieldStart(itemName)
                         generator.writeArrayFieldStart(item.principal.principals.first.principal)
                         item.principal.principals.second.forEach { generator.writeObject(it) }
                         generator.writeEndArray()
+                        generator.writeEndObject()
                     }
                 }
-                generator.writeEndObject()
             }
             if(item.condition != null && item.condition.conditions.isNotEmpty()){
                 generator.writeObjectFieldStart("Condition")
