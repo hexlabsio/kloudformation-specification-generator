@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.cfg.MapperConfig
 import com.fasterxml.jackson.databind.introspect.AnnotatedMethod
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.kloudformation.KloudResource
 import io.kloudformation.Value
@@ -53,7 +54,8 @@ data class KloudFormationTemplate(
                     if(it.value.updatePolicy != null) generator.writeObjectField("UpdatePolicy", it.value.updatePolicy)
                     if(it.value.deletionPolicy != null) generator.writeObjectField("DeletionPolicy", it.value.deletionPolicy)
                     if(codec is ObjectMapper){
-                        val props = codec.valueToTree<JsonNode>(it.value)
+                        val props = codec.valueToTree<ObjectNode>(it.value)
+                        it.value.otherProperties.orEmpty().forEach { name, value -> props.put(name, codec.valueToTree<JsonNode>(value))}
                         if(props.size() != 0) {
                             generator.writeFieldName("Properties")
                             generator.writeTree(props)
