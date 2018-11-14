@@ -1,3 +1,10 @@
 target
 *.iml
 .idea
+.gradle/
+build/
+gradle.properties
+.DS_Store
+classes/
+/site/
+out/
