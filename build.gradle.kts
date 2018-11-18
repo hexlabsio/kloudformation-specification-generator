@@ -58,13 +58,11 @@ val sourcesJar by tasks.registering(Jar::class) {
     from(sourceSets["main"].allSource)
 }
 
-val bintray_user: String? by project
-val bintray_key: String? by project
-
 bintray {
-    user = System.getenv("BINTRAY_USER")
-    key = System.getenv("BINTRAY_KEY")
+    user = "hexlabs-builder"
+    key = System.getProperty("BINTRAY_KEY") ?: "UNKNOWN"
     setPublications("mavenJava")
+    publish = true
     pkg(
     closureOf<BintrayExtension.PackageConfig> {
         repo = "kloudformation"
