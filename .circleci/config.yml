@@ -11,7 +11,7 @@ jobs:
         - gradle-{{ checksum "build.gradle.kts" }}
     - run: ./gradlew build -DBUILD_NUM=$CIRCLE_BUILD_NUM
     - store_artifacts:
-        path: build/libs/*
+        path: build/libs
     - save_cache:
         paths:
         - ~/.gradle
