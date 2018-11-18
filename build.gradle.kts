@@ -4,9 +4,14 @@ import org.gradle.api.tasks.bundling.Jar
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
+fun version(): String{
+    val buildNumber = System.getProperty("BUILD_NUM")
+    val version = "0.1" + if(buildNumber.isNullOrEmpty()) "-SNAPSHOT" else ".$buildNumber"
+    println("building version $version")
+    return version
+}
 
-
-val projectVersion = "1.0-SNAPSHOT"
+val projectVersion = version()
 val projectDescription = """KloudFormation Specification Generator"""
 
 val jacksonVersion = "2.9.7"
@@ -32,8 +37,6 @@ repositories {
     mavenCentral()
 }
 
-
-
 dependencies {
     compile(kotlin("stdlib-jdk8"))
     compile(group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version = kotlinVersion)
@@ -55,12 +58,12 @@ val sourcesJar by tasks.registering(Jar::class) {
     from(sourceSets["main"].allSource)
 }
 
-val bintray_user: String by project
-val bintray_key: String by project
+val bintray_user: String? by project
+val bintray_key: String? by project
 
 bintray {
-    user = bintray_user
-    key = bintray_key
+    user = System.getenv("BINTRAY_USER")
+    key = System.getenv("BINTRAY_KEY")
     setPublications("mavenJava")
     pkg(
     closureOf<BintrayExtension.PackageConfig> {
@@ -68,11 +71,10 @@ bintray {
         name = "kloudformation-specification-generator"
         userOrg = "hexlabsio"
         setLicenses("Apache-2.0")
-        vcsUrl = "https://github.com/hexlabsio/kloudformation.git"
+        vcsUrl = "https://github.com/hexlabsio/kloudformation-specification-generator.git"
         version(closureOf<BintrayExtension.VersionConfig> {
             name = projectVersion
             desc = projectVersion
-
         })
     })
 }
@@ -82,6 +84,11 @@ publishing {
         register("mavenJava", MavenPublication::class) {
             from(components["java"])
             artifact(sourcesJar.get())
+            pom.withXml {
+                asNode().apply {
+                   appendNode("name", "kloudformation-specification-generator")
+                }
+            }
         }
     }
 }
