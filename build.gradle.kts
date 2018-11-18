@@ -1,4 +1,6 @@
 import com.jfrog.bintray.gradle.BintrayExtension
+import groovy.util.Node
+import groovy.util.NodeList
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.api.tasks.bundling.Jar
 import java.time.OffsetDateTime
@@ -20,6 +22,7 @@ val kotlinVersion = "1.3.0"
 val junitVersion = "5.0.0"
 val gitPublishVersion = "5.0.0"
 
+val artifactId = "kloudformation-specification-generator"
 group = "io.kloudformation"
 version = projectVersion
 description = projectDescription
@@ -66,7 +69,7 @@ bintray {
     pkg(
     closureOf<BintrayExtension.PackageConfig> {
         repo = "kloudformation"
-        name = "kloudformation-specification-generator"
+        name = artifactId
         userOrg = "hexlabsio"
         setLicenses("Apache-2.0")
         vcsUrl = "https://github.com/hexlabsio/kloudformation-specification-generator.git"
@@ -81,16 +84,16 @@ publishing {
     publications {
         register("mavenJava", MavenPublication::class) {
             from(components["java"])
+            artifactId = artifactId
             artifact(sourcesJar.get())
             pom.withXml {
-                asNode().appendNode("dependencies").let { depNode ->
+                val dependencies = (asNode()["dependencies"] as NodeList)
                     configurations.compile.allDependencies.forEach {
-                        depNode.appendNode("dependency").apply {
+                        dependencies.add(Node(null, "dependency").apply {
                             appendNode("groupId", it.group)
                             appendNode("artifactId", it.name)
                             appendNode("version", it.version)
-                        }
-                    }
+                        })
                 }
             }
         }
