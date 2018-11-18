@@ -1,4 +1,5 @@
 # kloud-formation
+[![CircleCI](https://circleci.com/gh/hexlabsio/kloudformation-specification-generator/tree/master.svg?style=svg)](https://circleci.com/gh/hexlabsio/kloudformation-specification-generator/tree/master)
 
 
 ## Create a new  Template
