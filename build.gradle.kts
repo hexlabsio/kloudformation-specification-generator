@@ -29,13 +29,13 @@ plugins {
     id("com.jfrog.bintray") version "1.8.4"
     kotlin("jvm") version "1.3.0"
     `maven-publish`
-
 }
 
 repositories {
     jcenter()
     mavenCentral()
 }
+
 
 dependencies {
     compile(kotlin("stdlib-jdk8"))
@@ -83,8 +83,14 @@ publishing {
             from(components["java"])
             artifact(sourcesJar.get())
             pom.withXml {
-                asNode().apply {
-                   appendNode("name", "kloudformation-specification-generator")
+                asNode().appendNode("dependencies").let { depNode ->
+                    configurations.compile.allDependencies.forEach {
+                        depNode.appendNode("dependency").apply {
+                            appendNode("groupId", it.group)
+                            appendNode("artifactId", it.name)
+                            appendNode("version", it.version)
+                        }
+                    }
                 }
             }
         }
