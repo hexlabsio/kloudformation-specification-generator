@@ -1,6 +1,6 @@
-# kloud-formation
+# Kloud Formation Generator
 [![CircleCI](https://circleci.com/gh/hexlabsio/kloudformation-specification-generator/tree/master.svg?style=svg)](https://circleci.com/gh/hexlabsio/kloudformation-specification-generator/tree/master)
-
+[ ![Download](https://api.bintray.com/packages/hexlabsio/kloudformation/kloudformation-specification-generator/images/download.svg) ](https://bintray.com/hexlabsio/kloudformation/kloudformation-specification-generator/_latestVersion)
 
 ## Create a new  Template
 
