@@ -13,11 +13,7 @@ data class ImportValue<T>(val sharedValueToImport: ImportValue.Value<String>):
 
     class Serializer: StdSerializer<ImportValue<*>>(ImportValue::class.java){
         override fun serialize(item: ImportValue<*>, generator: JsonGenerator, provider: SerializerProvider) {
-            generator.writeStartObject()
-            generator.writeArrayFieldStart("Fn::ImportValue")
-            generator.writeObject(item.sharedValueToImport)
-            generator.writeEndArray()
-            generator.writeEndObject()
+            generator.writeObjectField("Fn::ImportValue", item.sharedValueToImport)
         }
     }
 }
