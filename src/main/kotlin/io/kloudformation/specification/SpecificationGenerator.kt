@@ -21,7 +21,7 @@ private val regionSpecifications = listOf(
         "us-west-2"
 )
 fun main(args: Array<String>) {
-    SpecificationPoet.generate(SpecificationMerger.merge(regionSpecifications.map {
-        jacksonObjectMapper.readValue<Specification>(Specification::class.java.classLoader.getResource("specification/$it.json"))
+    SpecificationPoet.generate(SpecificationMerger.merge(SpecificationDownloader.downloadAll().map {
+        jacksonObjectMapper.readValue<Specification>(it)
     }))
 }

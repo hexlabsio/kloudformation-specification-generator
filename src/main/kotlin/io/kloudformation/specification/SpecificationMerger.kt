@@ -5,7 +5,7 @@ private typealias Properties<T> = Map<String, T>
 object SpecificationMerger {
     fun PropertyInfo.merge(b: PropertyInfo) = copy(properties = properties.merge(b.properties))
     fun <T> Properties<T>.merge(b: Properties<T>, mergeValue: T.(T)->T = { this }): Properties<T>{
-        val (keysOnlyInA, keysInBoth) = keys.partition { b.containsKey(it) }
+        val (keysInBoth, keysOnlyInA) = keys.partition { b.containsKey(it) }
         val keysOnlyInB = b.keys.filter { !this.containsKey(it) }
         return (keysOnlyInA.map { it to this[it]!! } +
                 keysOnlyInB.map { it to b[it]!! } +
