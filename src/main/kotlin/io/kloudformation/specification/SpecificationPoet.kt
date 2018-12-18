@@ -202,6 +202,7 @@ object SpecificationPoet {
 
     private fun builderClass(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo, typeMappings: List<TypeInfo>) = TypeSpec.classBuilder("Builder")
             .primaryConstructor(builderConstructor(types, isResource, typeName, propertyInfo))
+            .addSuperinterface(KloudResourceBuilder::class)
             .also { if(isResource) it.addProperty(PropertySpec.builder(logicalName, String::class).initializer(logicalName).build()) }
             .addProperties(propertyInfo.properties.sorted().let {
                 it.filter { !it.value.required }.map { buildVarProperty(types, typeName, it.key, it.value) } +
@@ -275,7 +276,7 @@ object SpecificationPoet {
     private fun childParams(parameters: Collection<String>) = parameters.foldIndexed(""){ index, acc, parameter -> acc + (if(index != 0) ", " else "") + parameter }
 
     private fun typeSetterFunction(name: String, propertyType: String, typeName: String, typeMappings:  List<TypeInfo>): FunSpec{
-        val parent = (typeMappings.find { it.awsTypeName == typeName }!!.properties.find { it.name == propertyType.decapitalize() }!!.typeName as ClassName)
+        val parent = (typeMappings.find { it.awsTypeName == typeName }!!.properties.find { it.name == propertyType.decapitalize() && it.typeName.toString().startsWith("io")}!!.typeName as ClassName)
         val requiredProperties = typeMappings.find { it.canonicalName == parent.canonicalName }!!.properties.filter { !it.typeName.nullable }
         val propertyNames = requiredProperties.map { it.name }
         return FunSpec.builder(name.decapitalize())
@@ -318,8 +319,11 @@ object SpecificationPoet {
     private fun getClassName(typeName: String) =
             typeName.split("::", ".").last()
 
-    private fun getPackageName(isResource: Boolean, typeName: String) =
-            "io.kloudformation.${if (isResource) "resource" else "property"}${typeName.split("::", ".").dropLast(1).joinToString(".").toLowerCase().replaceFirst("aws.", ".")}"
+    private fun getPackageName(isResource: Boolean, typeName: String): String {
+        val subPackage = "io.kloudformation.${if (isResource) "resource" else "property"}"
+        return subPackage + if(typeName.contains("::")) typeName.split("::", ".").dropLast(1).joinToString(".",".").toLowerCase()
+            else  ""
+    }
 
 
     private fun primitiveTypeName(primitiveType: String) = ClassName.bestGuess(primitiveType.replace("Json", "com.fasterxml.jackson.databind.JsonNode").replace("Timestamp", "java.time.Instant").replace("Integer", "kotlin.Int").replace("String", "kotlin.String"))

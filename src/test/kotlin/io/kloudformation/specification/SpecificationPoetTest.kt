@@ -16,10 +16,26 @@ class SpecificationPoetTest{
 
     private val files = SpecificationPoet.generateSpecs(jacksonObjectMapper().configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true).readValue(SpecificationPoetTest::class.java.classLoader.getResourceAsStream("TestSpecification.json")))
     private val propertyPackage = "io.kloudformation.property"
+
+    @Nested
+    inner class OddNamed {
+        @Test
+        fun `should be in alexa package`() {
+            val alexaSomethingElse = files.find { it.name == "Else" } ?: throw AssertionError("Else file must exist")
+            expect("io.kloudformation.property.alexa.something") { alexaSomethingElse.packageName }
+        }
+
+        @Test
+        fun `should have tag class under resource package`() {
+            val tag = files.find { it.name == "Tag" } ?: throw AssertionError("Tag file must exist")
+            expect("io.kloudformation.resource") { tag.packageName }
+        }
+    }
+
     @Nested
     inner class SomeProperty {
 
-        private val `package` = "$propertyPackage.ec2.instance"
+        private val `package` = "$propertyPackage.aws.ec2.instance"
         private val className = "SomeProperty"
 
         val someProperty = files.find { it.name == className }
@@ -219,7 +235,7 @@ class SpecificationPoetTest{
 
         @Nested
         inner class SomeSubProperty {
-            private val `package` = "io.kloudformation.property.ec2.instance.someproperty"
+            private val `package` = "io.kloudformation.property.aws.ec2.instance.someproperty"
             private val name = "SomeSubProperty"
             val canonicalName = "$`package`.$name"
         }

@@ -28,6 +28,9 @@ open class KloudResource<T>(
         kloudResourceType = resourceType
         otherProperties = properties
     }
+}
+
+interface KloudResourceBuilder{
 
 }
 
