@@ -321,12 +321,10 @@ object SpecificationPoet {
 
     private fun getPackageName(isResource: Boolean, typeName: String): String {
         val subPackage = "io.kloudformation.${if (isResource) "resource" else "property"}"
-        return subPackage + if(typeName.contains("::")) typeName.split("::", ".").dropLast(1).joinToString(".",".").toLowerCase()
-            else  ""
+        return subPackage + if(typeName.contains("::")) typeName.split("::", ".").dropLast(1).joinToString(".",".").toLowerCase() else  ""
     }
 
-
-    private fun primitiveTypeName(primitiveType: String) = ClassName.bestGuess(primitiveType.replace("Json", "com.fasterxml.jackson.databind.JsonNode").replace("Timestamp", "java.time.Instant").replace("Integer", "kotlin.Int").replace("String", "kotlin.String"))
+    private fun primitiveTypeName(primitiveType: String) = ClassName.bestGuess(primitiveType.replace("Json", "com.fasterxml.jackson.databind.JsonNode").replace("Map", "com.fasterxml.jackson.databind.JsonNode").replace("Timestamp", "java.time.Instant").replace("Integer", "kotlin.Int").replace("String", "kotlin.String"))
 
     private fun valueTypeName(primitiveType: String, wrapped: Boolean) =
             if(wrapped) Value::class ofType primitiveTypeName(primitiveType)
