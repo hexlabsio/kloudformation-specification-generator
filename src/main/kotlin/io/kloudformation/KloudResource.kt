@@ -5,16 +5,18 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.kloudformation.function.Reference
 import io.kloudformation.function.plus
 
+data class ResourceProperties(@JsonIgnore val condition: String? = null,
+                              @JsonIgnore val metadata: Value<JsonNode>? = null,
+                              @JsonIgnore val updatePolicy: UpdatePolicy? = null,
+                              @JsonIgnore val creationPolicy: CreationPolicy? = null,
+                              @JsonIgnore val deletionPolicy: String? = null,
+                              @JsonIgnore var otherProperties: Map<String, *>? = null)
+
 open class KloudResource<T>(
         @JsonIgnore open val logicalName: String,
+        @JsonIgnore open val resourceProperties: ResourceProperties = ResourceProperties(),
         @JsonIgnore open var kloudResourceType: String = "AWS::CloudFormation::CustomResource",
-        @JsonIgnore open val dependsOn: List<String>? = null,
-        @JsonIgnore open val condition: String? = null,
-        @JsonIgnore open val metadata: Value<JsonNode>? = null,
-        @JsonIgnore open val updatePolicy: UpdatePolicy? = null,
-        @JsonIgnore open val creationPolicy: CreationPolicy? = null,
-        @JsonIgnore open val deletionPolicy: String? = null,
-        @JsonIgnore open var otherProperties: Map<String, *>? = null
+        @JsonIgnore open val dependsOn: List<String>? = null
 ){
 
     fun ref() = Reference<T>(logicalName)
@@ -26,7 +28,7 @@ open class KloudResource<T>(
 
     fun asCustomResource(resourceType: String = "AWS::CloudFormation::CustomResource", properties: Map<String, *> = emptyMap<String, String>()) = also {
         kloudResourceType = resourceType
-        otherProperties = properties
+        resourceProperties.otherProperties = properties
     }
 }
 

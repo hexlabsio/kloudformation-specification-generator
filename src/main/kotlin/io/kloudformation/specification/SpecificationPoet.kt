@@ -1,7 +1,6 @@
 package io.kloudformation.specification
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.squareup.kotlinpoet.*
 import io.kloudformation.*
@@ -14,45 +13,36 @@ object SpecificationPoet {
 
     private const val logicalName = "logicalName"
     private const val dependsOn = "dependsOn"
-    private const val condition = "condition"
-    private const val metadata = "metadata"
-    private const val creationPolicy = "creationPolicy"
-    private const val updatePolicy = "updatePolicy"
-    private const val deletionPolicy = "deletionPolicy"
+    private const val resourceProperties = "resourceProperties"
 
-    private val resourceProperties = listOf(logicalName, dependsOn, condition, metadata, creationPolicy, updatePolicy, deletionPolicy)
-    private fun typeFor(resource: String) = when(resource){
-        dependsOn -> List::class ofType String::class
-        metadata -> Value::class ofType JsonNode::class
-        creationPolicy -> CreationPolicy::class.asTypeName()
-        updatePolicy -> UpdatePolicy::class.asTypeName()
-        else -> String::class.asTypeName()
-    }
-    private fun builderPropertyTypeFor(resourceProperty: String) = typeFor(resourceProperty).let { if(resourceProperty == logicalName) it else it.asNullable() }
-
-    private val builderFunctionResourceParameters = resourceProperties.map { ParameterSpec.builder(it, typeFor(it).asNullable()).defaultValue("null").build() }
+    private val builderFunctionResourceParameters = listOf(
+            ParameterSpec.builder(logicalName, String::class.asTypeName().asNullable()).defaultValue("null").build(),
+            ParameterSpec.builder(dependsOn, (List::class ofType String::class).asNullable()).defaultValue("null").build(),
+            ParameterSpec.builder(resourceProperties, ResourceProperties::class).defaultValue("%T()", ResourceProperties::class).build()
+    )
     private fun TypeSpec.Builder.addResourceConstructorParameters() = also {
-        resourceProperties.forEach {
-            addSuperclassConstructorParameter("$it = $it")
-            addProperty(PropertySpec.builder(it, builderPropertyTypeFor(it), KModifier.OVERRIDE).initializer(it).addAnnotation(JsonIgnore::class).build())
-        }
+        addSuperclassConstructorParameter("$logicalName=$logicalName")
+        addSuperclassConstructorParameter("$dependsOn=$dependsOn")
+        addSuperclassConstructorParameter("$resourceProperties=$resourceProperties")
+
+        addProperty(PropertySpec.builder(logicalName, String::class,KModifier.OVERRIDE).initializer(logicalName).addAnnotation(JsonIgnore::class).build())
+        addProperty(PropertySpec.builder(dependsOn, (List::class ofType String::class).asNullable(),KModifier.OVERRIDE).initializer(dependsOn).addAnnotation(JsonIgnore::class).build())
+        addProperty(PropertySpec.builder(resourceProperties, ResourceProperties::class,KModifier.OVERRIDE).initializer(resourceProperties).addAnnotation(JsonIgnore::class).build())
     }
+
     private fun FunSpec.Builder.addResourceConstructorParameters() = also {
-        resourceProperties.filter { it != logicalName }.forEach {
-            addParameter(ParameterSpec.builder(it,typeFor(it).asNullable(), KModifier.OVERRIDE).defaultValue("null").addAnnotation(JsonIgnore::class).build())
-        }
+        addParameter(ParameterSpec.builder(dependsOn, (List::class ofType String::class).asNullable()).defaultValue("null").addAnnotation(JsonIgnore::class).build())
+        addParameter(ParameterSpec.builder(resourceProperties, ResourceProperties::class).defaultValue("%T()", ResourceProperties::class).addAnnotation(JsonIgnore::class).build())
     }
 
     private fun TypeSpec.Builder.addBuilderResourceProperties() = also {
-        resourceProperties.filter { it != logicalName }.forEach {
-            addProperty(PropertySpec.builder(it, typeFor(it).asNullable()).initializer(it).build())
-        }
+        addProperty(PropertySpec.builder(dependsOn, (List::class ofType String::class).asNullable()).initializer(dependsOn).build())
+        addProperty(PropertySpec.builder(resourceProperties, ResourceProperties::class).initializer(resourceProperties).build())
     }
 
     private fun FunSpec.Builder.addResourceParameters() = also {
-        resourceProperties.filter { it != logicalName }.forEach {
-            addParameter(ParameterSpec.builder(it, typeFor(it).asNullable()).defaultValue("null").build())
-        }
+        addParameter(ParameterSpec.builder(dependsOn, (List::class ofType String::class).asNullable()).defaultValue("null").build())
+        addParameter(ParameterSpec.builder(resourceProperties, ResourceProperties::class).defaultValue("%T()", ResourceProperties::class).build())
     }
 
 
@@ -226,7 +216,7 @@ object SpecificationPoet {
                     } + listOf(
                             FunSpec.builder("build")
                                     .also {
-                                        val primitiveProperties = propertyInfo.properties.keys + (if(isResource) resourceProperties.filter { it != logicalName } else emptySet())
+                                        val primitiveProperties = propertyInfo.properties.keys + (if(isResource) setOf(resourceProperties) else emptySet())
                                         it.addCode("return ${getClassName(typeName)}( " + primitiveProperties.foldIndexed(if(isResource) logicalName + (if(primitiveProperties.isNotEmpty()) ", " else "") else "") {
                                             index, acc, item ->  acc + (if(index != 0)", " else "") + "${item.decapitalize()} = ${item.decapitalize()}"
                                         } + ")\n")
@@ -237,9 +227,9 @@ object SpecificationPoet {
             .build()
 
     private fun paramListFrom(propertyInfo: PropertyInfo, isResource: Boolean, addCurrentDependee: Boolean = false, specialLogicalName: String? = null): String{
-        val nameList = (if(isResource) listOf(logicalName) else emptyList()) +
+        val nameList = (if(isResource) listOf(logicalName, dependsOn) else emptyList()) +
                 propertyInfo.properties.sorted().filter { it.value.required }.keys.map { it.decapitalize() } +
-                (if(isResource)  resourceProperties.filter { it != logicalName } else emptyList())
+                (if(isResource)  listOf(resourceProperties) else emptyList())
         return nameList.foldIndexed(""){
             index, acc, name -> acc + (if(index != 0) ", " else "") + "$name = " +
                 (

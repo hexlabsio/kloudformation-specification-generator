@@ -46,6 +46,17 @@
           "UpdateType": "Mutable"
         }
       }
+    },
+    "AWS::Events::EventBusPolicy.Condition": {
+      "type": "AWS::Events::EventBusPolicy.Condition",
+      "name": "Condition",
+      "resource": false,
+      "required": {},
+      "notRequired": {
+        "type": "io.kloudformation.Value<kotlin.String>",
+        "value": "io.kloudformation.Value<kotlin.String>",
+        "key": "io.kloudformation.Value<kotlin.String>"
+      }
     }
   },
   "ResourceTypes": {

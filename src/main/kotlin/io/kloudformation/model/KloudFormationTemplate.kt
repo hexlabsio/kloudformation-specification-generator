@@ -43,28 +43,29 @@ data class KloudFormationTemplate(
                         it.value.dependsOn!!.forEach { generator.writeString(it) }
                         generator.writeEndArray()
                     }
-                    if(it.value.metadata != null){
-                        generator.writeObjectField("Metadata", it.value.metadata)
-                    }
-                    if(!it.value.condition.isNullOrEmpty()){
-                        generator.writeFieldName("Condition")
-                        generator.writeString(it.value.condition)
-                    }
-                    if(it.value.creationPolicy != null) generator.writeObjectField("CreationPolicy", it.value.creationPolicy)
-                    if(it.value.updatePolicy != null) generator.writeObjectField("UpdatePolicy", it.value.updatePolicy)
-                    if(it.value.deletionPolicy != null) generator.writeObjectField("DeletionPolicy", it.value.deletionPolicy)
-                    if(codec is ObjectMapper){
-                        val props = codec.valueToTree<ObjectNode>(it.value)
-                        it.value.otherProperties.orEmpty().forEach { name, value -> props.put(name, codec.valueToTree<JsonNode>(value))}
-                        if(props.size() != 0) {
-                            generator.writeFieldName("Properties")
-                            generator.writeTree(props)
+                    with(it.value.resourceProperties) {
+                        if (metadata != null) {
+                            generator.writeObjectField("Metadata", metadata)
                         }
+                        if (!condition.isNullOrEmpty()) {
+                            generator.writeFieldName("Condition")
+                            generator.writeString(condition)
+                        }
+                        if (creationPolicy != null) generator.writeObjectField("CreationPolicy", creationPolicy)
+                        if (updatePolicy != null) generator.writeObjectField("UpdatePolicy", updatePolicy)
+                        if (deletionPolicy != null) generator.writeObjectField("DeletionPolicy", deletionPolicy)
+                        if (codec is ObjectMapper) {
+                            val props = codec.valueToTree<ObjectNode>(it.value)
+                            otherProperties.orEmpty().forEach { name, value -> props.put(name, codec.valueToTree<JsonNode>(value)) }
+                            if (props.size() != 0) {
+                                generator.writeFieldName("Properties")
+                                generator.writeTree(props)
+                            }
+                        } else {
+                            generator.writeObjectField("Properties", it.value)
+                        }
+                        generator.writeEndObject()
                     }
-                    else{
-                        generator.writeObjectField("Properties", it.value)
-                    }
-                    generator.writeEndObject()
                 }
                 generator.writeEndObject()
             }
