@@ -38,13 +38,14 @@ class KloudFormationTemplateTest{
     }
 
     @Test
-    fun `should produce creation update and deltion policies`(){
+    fun `should produce creation update and deletion policies`(){
         val template = KloudFormationTemplate.create {
             testResource(
                     cidrBlock = +"ABC",
+                    resourceProperties = ResourceProperties(
                     deletionPolicy = DeletionPolicy.DELETE.policy,
                     updatePolicy = UpdatePolicy(autoScalingScheduledAction = AutoScalingScheduledAction(+true)),
-                    creationPolicy = CreationPolicy(CreationPolicy.AutoScalingCreationPolicy(Value.Of(40)))
+                    creationPolicy = CreationPolicy(CreationPolicy.AutoScalingCreationPolicy(Value.Of(40))))
             ){
                 enableDnsHostnames(true)
             }

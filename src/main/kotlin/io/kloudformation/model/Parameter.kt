@@ -16,7 +16,7 @@ data class Parameter<T>(
         val minLength: String? = null,
         val minValue: String? = null,
         val noEcho: String? = null
-): KloudResource<T>(logicalName, type)
+): KloudResource<T>(logicalName = logicalName, kloudResourceType = type)
 
 sealed class ParameterType<T>(val type: String){
     object StringParameter: ParameterType<String>("String")
