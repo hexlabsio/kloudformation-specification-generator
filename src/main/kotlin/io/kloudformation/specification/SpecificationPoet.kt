@@ -134,9 +134,9 @@ object SpecificationPoet {
         val packageName = getPackageName(isResource, typeName)
         it.builder(name.decapitalize()).also { func ->
             if (isResource) {
-                func.addCode( "return add( builder( $packageName.$name.create(${paramListFrom(propertyInfo, true, true, name)}) ).build() )\n" )
+                func.addCode( "return add( builder( %T.create(${paramListFrom(propertyInfo, true, true, name)}) ).build() )\n", ClassName.bestGuess("$packageName.$name") )
             } else {
-                func.addCode( "return builder( $packageName.$name.create(${paramListFrom(propertyInfo, false)}) ).build()\n" )
+                func.addCode( "return builder( %T.create(${paramListFrom(propertyInfo, false)}) ).build()\n", ClassName.bestGuess("$packageName.$name") )
             }
             propertyInfo.properties.sorted().filter { it.value.required }.map { func.addParameter(buildParameter(types, typeName, it.key, it.value)) }
             if (isResource) func.addParameters(builderFunctionResourceParameters)
@@ -283,7 +283,7 @@ object SpecificationPoet {
                                 )
                         ).defaultValue("{ this }").build()
                 )
-                .addCode("return ${name.decapitalize()}(${parent.canonicalName}.create(${childParams(propertyNames)}).builder().build())\n")
+                .addCode("return ${name.decapitalize()}(%T.create(${childParams(propertyNames)}).builder().build())\n", ClassName.bestGuess(parent.canonicalName))
                 .build()
     }
 
