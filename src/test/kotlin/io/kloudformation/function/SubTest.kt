@@ -38,7 +38,7 @@ class SubTest {
 
     @Test
     fun `should accept Base64, FindInMap, Att, GetAZs, If, ImportValue, Join, Select and Reference for variables`(){
-        expect("{\"$sub\":[\"www.\${Domain}\",{\"A\":{\"Fn::Base64\":\"B\"},\"C\":{\"Fn::FindInMap\":[\"D\",\"E\",\"F\"]},\"G\":{\"Fn::GetAtt\":[\"H\",\"I\"]},\"J\":{\"Fn::GetAZs\":\"us-east-1\"},\"K\":{\"Fn::If\":[\"L\",\"M\",\"N\"]},\"O\":{\"Fn::ImportValue\":[\"P\"]},\"Q\":{\"Fn::Join\":[\":\",[\"R\",\"S\"]]},\"T\":{\"Fn::Select\":[\"0\",\"U\"]},\"V\":{\"Ref\":\"W\"}}]}") {
+        expect("{\"$sub\":[\"www.\${Domain}\",{\"A\":{\"Fn::Base64\":\"B\"},\"C\":{\"Fn::FindInMap\":[\"D\",\"E\",\"F\"]},\"G\":{\"Fn::GetAtt\":[\"H\",\"I\"]},\"J\":{\"Fn::GetAZs\":\"us-east-1\"},\"K\":{\"Fn::If\":[\"L\",\"M\",\"N\"]},\"O\":{\"Fn::ImportValue\":\"P\"},\"Q\":{\"Fn::Join\":[\":\",[\"R\",\"S\"]]},\"T\":{\"Fn::Select\":[\"0\",\"U\"]},\"V\":{\"Ref\":\"W\"}}]}") {
             mapper.writeValueAsString(Sub("www.\${Domain}",
                     mapOf(
                             "A" to FnBase64(Value.Of("B")),

@@ -269,18 +269,19 @@ object SpecificationPoet {
         val parent = (typeMappings.find { it.awsTypeName == typeName }!!.properties.find { it.name == propertyType.decapitalize() && it.typeName.toString().startsWith("io")}!!.typeName as ClassName)
         val requiredProperties = typeMappings.find { it.canonicalName == parent.canonicalName }!!.properties.filter { !it.typeName.nullable }
         val propertyNames = requiredProperties.map { it.name }
+
         return FunSpec.builder(name.decapitalize())
                 .addParameters(requiredProperties.map { ParameterSpec.builder(it.name,it.typeName).build() })
                 .addParameter(
                         ParameterSpec.builder(
                                 name = "builder",
                                 type = LambdaTypeName.get(
-                                        receiver = ClassName.bestGuess("${parent.simpleName()}.Builder"),
-                                        returnType = ClassName.bestGuess("${parent.simpleName()}.Builder")
+                                        receiver = ClassName.bestGuess("${parent.canonicalName}.Builder"),
+                                        returnType = ClassName.bestGuess("${parent.canonicalName}.Builder")
                                 )
                         ).defaultValue("{ this }").build()
                 )
-                .addCode("return ${name.decapitalize()}(${parent.simpleName()}.create(${childParams(propertyNames)}).builder().build())\n")
+                .addCode("return ${name.decapitalize()}(${parent.canonicalName}.create(${childParams(propertyNames)}).builder().build())\n")
                 .build()
     }
 

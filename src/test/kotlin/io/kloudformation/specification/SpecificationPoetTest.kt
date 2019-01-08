@@ -16,6 +16,7 @@ class SpecificationPoetTest{
 
     private val files = SpecificationPoet.generateSpecs(jacksonObjectMapper().configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true).readValue(SpecificationPoetTest::class.java.classLoader.getResourceAsStream("TestSpecification.json")))
     private val propertyPackage = "io.kloudformation.property"
+    private val resourcePackage = "io.kloudformation.resource"
 
     @Nested
     inner class OddNamed {
@@ -229,6 +230,18 @@ class SpecificationPoetTest{
                         expect(0){ parameters.count() }
                         expect("return SomeProperty( propOne = propOne, propTwo = propTwo)"){ body.toString().trim() }
                     }
+                }
+
+                @Test
+                fun `should generate fully qualified names for properties with same name as resource`(){
+                    val files = SpecificationPoet.generateSpecs(jacksonObjectMapper().configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true).readValue(SpecificationPoetTest::class.java.classLoader.getResourceAsStream("PropertySameAsResource.json")))
+                    val resourceFile = files.find { it.packageName == "$resourcePackage.aws.ses" }!!
+                    val templateResourceClass = resourceFile.members[1] as TypeSpec
+                    val templateResourceBuilder = templateResourceClass.typeSpecs[0]
+                    val propertyFunctions = templateResourceBuilder.funSpecs.filter { it.name == "template" }
+                    val builderFunction = propertyFunctions.find { it.parameters[0].name == "builder" }!!
+                    val builderType: LambdaTypeName = builderFunction.parameters[0].type as LambdaTypeName
+                    expect(ClassName.bestGuess("$propertyPackage.aws.ses.template.Template.Builder")){ builderType.receiver }
                 }
             }
         }

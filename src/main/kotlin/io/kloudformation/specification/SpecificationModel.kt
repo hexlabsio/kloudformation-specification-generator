@@ -7,8 +7,8 @@ data class Specification(
 )
 
 data class PropertyInfo(
-        val documentation: String,
         val properties: Map<String, Property>,
+        val documentation: String? = null,
         val attributes: Map<String, Attribute>? = null,
         val additionalProperties: Boolean? = null
 )
