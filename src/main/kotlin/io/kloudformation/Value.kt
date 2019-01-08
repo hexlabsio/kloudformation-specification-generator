@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.kloudformation.function.*
+import io.kloudformation.metadata.CfnCommand
+import io.kloudformation.metadata.CfnInit
 
 interface Value<out T>{
     @JsonSerialize(using = Of.Serializer::class)
@@ -22,7 +24,9 @@ interface Value<out T>{
             IfValue<T>,
             EqualsValue,
             ConditionalValue<T>,
-            FindInMapValue<T>
+            FindInMapValue<T>,
+            CfnCommand.Value<T>,
+            CfnInit.Value<T>
     {
         class Serializer: StdSerializer<Value.Of<*>>(Value.Of::class.java){
             override fun serialize(item: Value.Of<*>, generator: JsonGenerator, provider: SerializerProvider) {
