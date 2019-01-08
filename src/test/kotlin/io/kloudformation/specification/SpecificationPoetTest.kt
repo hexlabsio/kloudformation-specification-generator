@@ -78,9 +78,9 @@ class SpecificationPoetTest{
                     expect("builder") { name }
                     expect(LambdaTypeName::class) { type::class }
                     with(type as LambdaTypeName) {
-                        expect(ClassName.bestGuess("$className.Builder")) { receiver }
+                        expect(ClassName.bestGuess("io.kloudformation.property.aws.ec2.instance.$className.Builder")) { receiver }
                         expect(0) { parameters.count() }
-                        expect(ClassName.bestGuess("$className.Builder")) { returnType }
+                        expect(ClassName.bestGuess("io.kloudformation.property.aws.ec2.instance.$className.Builder")) { returnType }
                         expect("{ this }") { defaultValue.toString() }
                     }
                 }
@@ -88,7 +88,7 @@ class SpecificationPoetTest{
 
             @Test
             fun `should result in invocation of builder function then call of build`() {
-                expect("return builder( $className.create(propOne = propOne) ).build()") {
+                expect("return builder( io.kloudformation.property.aws.ec2.instance.$className.create(propOne = propOne) ).build()") {
                     function.body.toString().trim()
                 }
             }
@@ -236,12 +236,15 @@ class SpecificationPoetTest{
                 fun `should generate fully qualified names for properties with same name as resource`(){
                     val files = SpecificationPoet.generateSpecs(jacksonObjectMapper().configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true).readValue(SpecificationPoetTest::class.java.classLoader.getResourceAsStream("PropertySameAsResource.json")))
                     val resourceFile = files.find { it.packageName == "$resourcePackage.aws.ses" }!!
+                    val templateResourceFunction = resourceFile.members[0] as FunSpec
+                    val builderParameter = templateResourceFunction.parameters.find { it.name == "builder" }!!.type as LambdaTypeName
                     val templateResourceClass = resourceFile.members[1] as TypeSpec
                     val templateResourceBuilder = templateResourceClass.typeSpecs[0]
                     val propertyFunctions = templateResourceBuilder.funSpecs.filter { it.name == "template" }
                     val builderFunction = propertyFunctions.find { it.parameters[0].name == "builder" }!!
                     val builderType: LambdaTypeName = builderFunction.parameters[0].type as LambdaTypeName
                     expect(ClassName.bestGuess("$propertyPackage.aws.ses.template.Template.Builder")){ builderType.receiver }
+                    expect(ClassName.bestGuess("$resourcePackage.aws.ses.Template.Builder")){ builderParameter.receiver }
                 }
             }
         }

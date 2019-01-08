@@ -131,15 +131,17 @@ object SpecificationPoet {
 
     private fun builderFunction(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) = FunSpec.let {
         val name = getClassName(typeName)
+        val packageName = getPackageName(isResource, typeName)
         it.builder(name.decapitalize()).also { func ->
             if (isResource) {
-                func.addCode( "return add( builder( $name.create(${paramListFrom(propertyInfo, true, true, name)}) ).build() )\n" )
+                func.addCode( "return add( builder( $packageName.$name.create(${paramListFrom(propertyInfo, true, true, name)}) ).build() )\n" )
             } else {
-                func.addCode( "return builder( $name.create(${paramListFrom(propertyInfo, false)}) ).build()\n" )
+                func.addCode( "return builder( $packageName.$name.create(${paramListFrom(propertyInfo, false)}) ).build()\n" )
             }
             propertyInfo.properties.sorted().filter { it.value.required }.map { func.addParameter(buildParameter(types, typeName, it.key, it.value)) }
             if (isResource) func.addParameters(builderFunctionResourceParameters)
-            func.addParameter(ParameterSpec.builder("builder", LambdaTypeName.get(builderClassNameFrom(name), returnType = builderClassNameFrom(name))).defaultValue("{ this }").build())
+            val builderTypeName = builderClassNameFrom("$packageName.$name")
+            func.addParameter(ParameterSpec.builder("builder", LambdaTypeName.get(builderTypeName, returnType = builderTypeName)).defaultValue("{ this }").build())
         }
                 .receiver(KloudFormationTemplate.Builder::class)
                 .build()
