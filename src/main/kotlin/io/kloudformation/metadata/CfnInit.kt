@@ -5,7 +5,7 @@ import io.kloudformation.Value
 import io.kloudformation.json
 
 @DslMarker
-annotation class PackageDsl
+annotation class CfnDsl
 
 data class CfnConfigSetRef(val ConfigSet: String): CfnInit.Value<String>
 data class CfnInit(val configSets: Map<String, List<CfnInit.Value<String>>>, val configs: Map<String, CfnInitConfig>){
@@ -46,7 +46,7 @@ data class CfnInitConfig(
     class Builder(
             private var packages: Value<JsonNode>? = null,
             private var groups: MutableMap<String, CfnGroup>? = null,
-            private  var users: MutableMap<String, CfnUser>? = null,
+            private var users: MutableMap<String, CfnUser>? = null,
             private var sources: MutableMap<String, Value<String>>? = null,
             private var files: MutableMap<String, CfnFile>? = null,
             private var commands: MutableMap<String, CfnCommand>? = null,
@@ -56,6 +56,29 @@ data class CfnInitConfig(
         fun packages(builder: PackagesBuilder.()->Unit){
             packages = PackagesBuilder().apply(builder).build()
         }
+
+        fun groups(builder: CfnGroup.GroupsBuilder.()->Unit){
+            groups = CfnGroup.GroupsBuilder().apply(builder).build().toMutableMap()
+        }
+
+        fun files(builder: CfnFile.FilesBuilder.()->Unit){
+            files = CfnFile.FilesBuilder().apply(builder).build().toMutableMap()
+        }
+
+        fun services(builder: CfnService.ServicesBuilder.()->Unit){
+            services =  CfnService.ServicesBuilder().apply(builder).build().toMutableMap()
+        }
+
+        fun users(builder: CfnUser.UsersBuilder.()->Unit){
+            users = CfnUser.UsersBuilder().apply(builder).build().toMutableMap()
+        }
+
+        fun source(target: String, sourceUrl: Value<String>){
+            if(sources == null) sources = mutableMapOf()
+            sources!![target] = sourceUrl
+        }
+
+        fun source(target: String, sourceUrl: String) = source(target, Value.Of(sourceUrl))
 
         fun command(name: String, command: CfnCommand.Value<String>, builder: CfnCommand.Builder.()->Unit = {}){
             if(commands == null) commands = mutableMapOf()
@@ -68,7 +91,7 @@ data class CfnInitConfig(
 
         fun build() = CfnInitConfig(packages, groups, users, sources, files, commands, services)
 
-        @PackageDsl
+        @CfnDsl
         class PackagesBuilder(private val packageManagers: MutableList<Pair<String, Any>> = mutableListOf()){
 
             operator fun PackageManager.invoke(packages: PackageBuilder.()->Unit) = this.value(packages)
@@ -79,7 +102,7 @@ data class CfnInitConfig(
 
             fun build() = json(packageManagers.toMap())
 
-            @PackageDsl
+            @CfnDsl
             class PackageBuilder(private val packages: MutableList<Pair<String, Any>> = mutableListOf()){
                 operator fun String.invoke(url: String){
                     packages.add(this to url)
@@ -96,11 +119,47 @@ data class CfnInitConfig(
 data class CfnService(
         val ensureRunning: Value<Boolean>? = null,
         val enabled: Value<Boolean>? = null,
-        val files: Value<List<Value<String>>>? = null,
-        val sources: Value<List<Value<String>>>? = null,
-        val packages: Map<Value<String>, Value<List<Value<String>>>>? = null,
-        val commands: Value<List<Value<String>>>? = null
-)
+        val files: List<Value<String>>? = null,
+        val sources: List<Value<String>>? = null,
+        val packages: Map<String, List<Value<String>>>? = null,
+        val commands: List<Value<String>>? = null
+){
+    @CfnDsl
+    class ServicesBuilder(private val services: MutableMap<String, Map<String, CfnService>> = mutableMapOf()){
+        operator fun String.invoke(serviceBuilder: ServiceManagerBuilder.()->Unit){
+            services[this] = ServiceManagerBuilder().apply(serviceBuilder).build()
+        }
+        fun build(): Map<String, Map<String, CfnService>> = services
+
+        @CfnDsl
+        class ServiceManagerBuilder(private val serviceManager: MutableMap<String, CfnService> = mutableMapOf()){
+            operator fun String.invoke(serviceBuilder: ServiceBuilder.()->Unit){
+                serviceManager[this] = ServiceBuilder().apply(serviceBuilder).build()
+            }
+            fun build(): Map<String, CfnService> = serviceManager
+
+            @CfnDsl
+            class ServiceBuilder(
+                    private var ensureRunning: Value<Boolean>? = null,
+                    private var enabled: Value<Boolean>? = null,
+                    private var files: List<Value<String>>? = null,
+                    private var sources: List<Value<String>>? = null,
+                    private var packages: Map<String, List<Value<String>>>? = null,
+                    private var commands: List<Value<String>>? = null
+            ){
+                fun ensureRunning(ensureRunning: Boolean){ this.ensureRunning = Value.Of(ensureRunning) }
+                fun ensureRunning(ensureRunning: Value<Boolean>){ this.ensureRunning = ensureRunning }
+                fun enabled(enabled: Boolean){ this.enabled = Value.Of(enabled) }
+                fun enabled(enabled: Value<Boolean>){ this.enabled = enabled }
+                fun files(files: List<Value<String>>){ this.files = files }
+                fun sources(sources: List<Value<String>>){ this.sources = sources }
+                fun packages(vararg packages: Pair<String, List<Value<String>>>){ this.packages = packages.toMap() }
+                fun commands(commands: List<Value<String>>){ this.commands = commands }
+                fun build() = CfnService()
+            }
+        }
+    }
+}
 class CfnArrayCommand(vararg items: Value<String>): ArrayList<Value<String>>(items.toMutableList()), CfnCommand.Value<String>
 data class CfnCommand(
         val command: CfnCommand.Value<String>,
@@ -141,7 +200,44 @@ open class CfnFile(
         val mode: Value<String>? = null,
         val authentication: Value<String>? = null,
         val context: Value<JsonNode>? = null
-)
+){
+    @CfnDsl
+    class FilesBuilder(private val files: MutableList<Pair<String, CfnFile>> = mutableListOf()){
+        operator fun String.invoke(content: Value<String>, fileBuilder: FileBuilder.()->Unit){
+            files.add(this to FileBuilder(content = content).apply(fileBuilder).build())
+        }
+        fun remote(name: String, source: Value<String>, fileBuilder: FileBuilder.()->Unit){
+            files.add(name to FileBuilder(source = source).apply(fileBuilder).build())
+        }
+        fun build() = files.toMap()
+        @CfnDsl
+        class FileBuilder(
+                private val content: Value<String>? = null,
+                private val source: Value<String>? = null,
+                private var encoding: Value<String>? = null,
+                private var owner: Value<String>? = null,
+                private var group: Value<String>? = null,
+                private var mode: Value<String>? = null,
+                private var authentication: Value<String>? = null,
+                private var context: Value<JsonNode>? = null
+        ){
+            fun encoding(encoding: String) { this.encoding = Value.Of(encoding) }
+            fun encoding(encoding: Value<String>) { this.encoding = encoding }
+            fun owner(owner: String) { this.owner = Value.Of(owner) }
+            fun owner(owner: Value<String>) { this.owner = owner }
+            fun group(group: String) { this.group = Value.Of(group) }
+            fun group(group: Value<String>) { this.group = group }
+            fun mode(mode: String) { this.mode = Value.Of(mode) }
+            fun mode(mode: Value<String>) { this.mode = mode }
+            fun authentication(authentication: String) { this.authentication = Value.Of(authentication) }
+            fun authentication(authentication: Value<String>) { this.authentication = authentication }
+            fun context(context: Value<JsonNode>) { this.context = context }
+            fun build() = if(content != null)
+                CfnFileContent(content = content, encoding = encoding, owner=owner, group=group, mode=mode, authentication=authentication, context=context)
+            else CfnRemoteFile(source = source!!, encoding = encoding, owner=owner, group=group, mode=mode, authentication=authentication, context=context)
+        }
+    }
+}
 class CfnRemoteFile(
         val source: Value<String>,
         encoding: Value<String>? = null,
@@ -169,9 +265,31 @@ data class CfnUser(
         val uid: Value<String>,
         val groups: Value<List<Value<String>>>,
         val homeDir: Value<String>
-)
+){
+    @CfnDsl
+    class UsersBuilder(private val users: MutableList<Pair<String, CfnUser>> = mutableListOf()){
+        operator fun String.invoke(uid: Value<String>, groups: Value<List<Value<String>>>, homeDir: Value<String>){
+            users.add(this to CfnUser(uid,groups,homeDir))
+        }
+        fun build() = users.toMap()
+    }
+}
 
-interface CfnGroup
+interface CfnGroup{
+    @CfnDsl
+    class GroupsBuilder(private val groups: MutableList<Pair<String, CfnGroup>> = mutableListOf()){
+        operator fun String.invoke(groupBuilder: GroupBuilder.()->Unit){
+            groups.add(this to GroupBuilder().apply(groupBuilder).build())
+        }
+        fun build() = groups.toMap()
+        @CfnDsl
+        class GroupBuilder(private var gid: Value<String>? = null){
+            fun gid(gid: String) { this.gid = Value.Of(gid) }
+            fun gid(gid: Value<String>) { this.gid = gid }
+            fun build() = if(gid != null) CfnGroupWithId(gid!!) else CfnGroupNoId()
+        }
+    }
+}
 data class CfnGroupWithId(
         val gid: Value<String>
 ): CfnGroup

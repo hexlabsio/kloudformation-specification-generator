@@ -20,6 +20,25 @@ class CfnInitTest{
                         env("MAGIC" to +"I am test 2!")
                         cwd("~")
                     }
+                    groups {
+                        "group1" { gid("99") }
+                        "group2" { }
+                    }
+                    services {
+                        "sysvinit"{
+                            "nginx"{
+                                enabled(true)
+                                ensureRunning(true)
+                                files(listOf(+"/etc/nginx/nginx.conf"))
+                                sources(listOf(+"/var/www/html"))
+                            }
+                        }
+                    }
+                    source("/etc/puppet", "https://github.com/user1/cfn-demo/tarball/master")
+
+                    users {
+                        "myUser"(groups = +listOf(+"groupOne", +"groupTwo"), uid = +"50", homeDir = +"/tmp")
+                    }
                     packages {
                         PackageManager.rpm {
                             "epel"("http://download.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.rpm")
