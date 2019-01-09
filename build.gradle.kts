@@ -49,11 +49,18 @@ dependencies {
     compile(group = "com.squareup", name = "kotlinpoet", version = kotlinpoetVersion)
 
     testCompile(group = "org.junit.jupiter", name = "junit-jupiter-api", version = junitVersion)
+    testRuntime(group = "org.junit.jupiter", name = "junit-jupiter-engine", version = junitVersion)
     testCompile(kotlin("test-junit5"))
 }
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
+}
+tasks.withType<Test> {
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+    }
 }
 
 val sourcesJar by tasks.registering(Jar::class) {
