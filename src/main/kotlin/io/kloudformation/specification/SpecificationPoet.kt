@@ -8,6 +8,10 @@ import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.ParameterSpec
+import io.kloudformation.function.Att
+import io.kloudformation.model.KloudFormationTemplate
+import java.io.File
+import kotlin.reflect.KClass
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
@@ -18,10 +22,6 @@ import io.kloudformation.KloudResource
 import io.kloudformation.KloudResourceBuilder
 import io.kloudformation.ResourceProperties
 import io.kloudformation.Value
-import io.kloudformation.function.Att
-import io.kloudformation.model.KloudFormationTemplate
-import java.io.File
-import kotlin.reflect.KClass
 
 object SpecificationPoet {
 
@@ -45,8 +45,8 @@ object SpecificationPoet {
     }
 
     private fun FunSpec.Builder.addResourceConstructorParameters() = also {
-        addParameter(ParameterSpec.builder(dependsOn, (List::class ofType String::class).copy(true)).defaultValue("null").addAnnotation(JsonIgnore::class).build())
-        addParameter(ParameterSpec.builder(resourceProperties, ResourceProperties::class).defaultValue("%T()", ResourceProperties::class).addAnnotation(JsonIgnore::class).build())
+        addParameter(ParameterSpec.builder(dependsOn, (List::class ofType String::class).copy(true)).defaultValue("null").build())
+        addParameter(ParameterSpec.builder(resourceProperties, ResourceProperties::class).defaultValue("%T()", ResourceProperties::class).build())
     }
 
     private fun TypeSpec.Builder.addBuilderResourceProperties() = also {
