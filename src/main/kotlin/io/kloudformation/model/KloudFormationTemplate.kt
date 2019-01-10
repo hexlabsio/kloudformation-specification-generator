@@ -73,9 +73,9 @@ data class KloudFormationTemplate(
     }
 
     class NamingStrategy : PropertyNamingStrategy() {
-        override fun nameForGetterMethod(config: MapperConfig<*>?, method: AnnotatedMethod?, defaultName: String?) =
+        override fun nameForGetterMethod(config: MapperConfig<*>?, method: AnnotatedMethod, defaultName: String?) =
                 if(defaultName == "awsTemplateFormatVersion") "AWSTemplateFormatVersion"
-                else defaultName!!.capitalize()
+                else method.name.substring(3)
     }
 
     class Builder(
