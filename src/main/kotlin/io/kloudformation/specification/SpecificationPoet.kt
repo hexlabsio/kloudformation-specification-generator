@@ -8,6 +8,7 @@ import io.kloudformation.function.Att
 import io.kloudformation.model.KloudFormationTemplate
 import java.io.File
 import kotlin.reflect.KClass
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 
 object SpecificationPoet {
 
@@ -16,8 +17,8 @@ object SpecificationPoet {
     private const val resourceProperties = "resourceProperties"
 
     private val builderFunctionResourceParameters = listOf(
-            ParameterSpec.builder(logicalName, String::class.asTypeName().asNullable()).defaultValue("null").build(),
-            ParameterSpec.builder(dependsOn, (List::class ofType String::class).asNullable()).defaultValue("null").build(),
+            ParameterSpec.builder(logicalName, String::class.asClassName().copy(true)).defaultValue("null").build(),
+            ParameterSpec.builder(dependsOn, (List::class ofType String::class).copy(true)).defaultValue("null").build(),
             ParameterSpec.builder(resourceProperties, ResourceProperties::class).defaultValue("%T()", ResourceProperties::class).build()
     )
     private fun TypeSpec.Builder.addResourceConstructorParameters() = also {
@@ -26,22 +27,22 @@ object SpecificationPoet {
         addSuperclassConstructorParameter("$resourceProperties=$resourceProperties")
 
         addProperty(PropertySpec.builder(logicalName, String::class,KModifier.OVERRIDE).initializer(logicalName).addAnnotation(JsonIgnore::class).build())
-        addProperty(PropertySpec.builder(dependsOn, (List::class ofType String::class).asNullable(),KModifier.OVERRIDE).initializer(dependsOn).addAnnotation(JsonIgnore::class).build())
+        addProperty(PropertySpec.builder(dependsOn, (List::class ofType String::class).copy(true),KModifier.OVERRIDE).initializer(dependsOn).addAnnotation(JsonIgnore::class).build())
         addProperty(PropertySpec.builder(resourceProperties, ResourceProperties::class,KModifier.OVERRIDE).initializer(resourceProperties).addAnnotation(JsonIgnore::class).build())
     }
 
     private fun FunSpec.Builder.addResourceConstructorParameters() = also {
-        addParameter(ParameterSpec.builder(dependsOn, (List::class ofType String::class).asNullable()).defaultValue("null").addAnnotation(JsonIgnore::class).build())
+        addParameter(ParameterSpec.builder(dependsOn, (List::class ofType String::class).copy(true)).defaultValue("null").addAnnotation(JsonIgnore::class).build())
         addParameter(ParameterSpec.builder(resourceProperties, ResourceProperties::class).defaultValue("%T()", ResourceProperties::class).addAnnotation(JsonIgnore::class).build())
     }
 
     private fun TypeSpec.Builder.addBuilderResourceProperties() = also {
-        addProperty(PropertySpec.builder(dependsOn, (List::class ofType String::class).asNullable()).initializer(dependsOn).build())
+        addProperty(PropertySpec.builder(dependsOn, (List::class ofType String::class).copy(true)).initializer(dependsOn).build())
         addProperty(PropertySpec.builder(resourceProperties, ResourceProperties::class).initializer(resourceProperties).build())
     }
 
     private fun FunSpec.Builder.addResourceParameters() = also {
-        addParameter(ParameterSpec.builder(dependsOn, (List::class ofType String::class).asNullable()).defaultValue("null").build())
+        addParameter(ParameterSpec.builder(dependsOn, (List::class ofType String::class).copy(true)).defaultValue("null").build())
         addParameter(ParameterSpec.builder(resourceProperties, ResourceProperties::class).defaultValue("%T()", ResourceProperties::class).build())
     }
 
@@ -78,7 +79,7 @@ object SpecificationPoet {
                     .addType(
                             type.toBuilder()
                                     .primaryConstructor(type.primaryConstructor)
-                                    .companionObject(companionObject(types.keys, isResource, propertyType, propertyInfo!!))
+                                    .addType(companionObject(types.keys, isResource, propertyType, propertyInfo!!))
                                     .addType(builderClass((specification.propertyTypes + specification.resourceTypes).keys, isResource, propertyType, propertyInfo, fieldMappings))
                                     .build()
                     )
@@ -269,7 +270,7 @@ object SpecificationPoet {
 
     private fun typeSetterFunction(name: String, propertyType: String, typeName: String, typeMappings:  List<TypeInfo>): FunSpec{
         val parent = (typeMappings.find { it.awsTypeName == typeName }!!.properties.find { it.name == propertyType.decapitalize() && it.typeName.toString().startsWith("io")}!!.typeName as ClassName)
-        val requiredProperties = typeMappings.find { it.canonicalName == parent.canonicalName }!!.properties.filter { !it.typeName.nullable }
+        val requiredProperties = typeMappings.find { it.canonicalName == parent.canonicalName }!!.properties.filter { !it.typeName.isNullable }
         val propertyNames = requiredProperties.map { it.name }
 
         return FunSpec.builder(name.decapitalize())
@@ -290,22 +291,22 @@ object SpecificationPoet {
     private fun buildProperty(types: Set<String>, classTypeName: String, propertyName: String, property: Property) =
             PropertySpec.builder(
                     propertyName.decapitalize(),
-                    if (property.required) getType(types, classTypeName, property).asNonNullable() else getType(types, classTypeName, property).asNullable())
+                    if (property.required) getType(types, classTypeName, property).copy(false) else getType(types, classTypeName, property).copy(true))
                     .initializer(propertyName.decapitalize())
                     .build()
 
     private fun buildVarProperty(types: Set<String>, classTypeName: String, propertyName: String, property: Property) =
-            PropertySpec.varBuilder(
+            PropertySpec.builder(
                     propertyName.decapitalize(),
-                    getType(types, classTypeName, property).asNullable()
-            ).initializer("null").build()
+                    getType(types, classTypeName, property).copy(true)
+            ).mutable(true).initializer("null").build()
 
     private fun buildParameter(types: Set<String>, classTypeName: String, parameterName: String, property: Property) =
             if (property.required) ParameterSpec
-                    .builder(parameterName.decapitalize(), getType(types, classTypeName, property).asNonNullable())
+                    .builder(parameterName.decapitalize(), getType(types, classTypeName, property).copy(false))
                     .build()
             else ParameterSpec
-                    .builder(parameterName.decapitalize(), getType(types, classTypeName, property).asNullable())
+                    .builder(parameterName.decapitalize(), getType(types, classTypeName, property).copy(true))
                     .defaultValue("null")
                     .build()
 
@@ -335,9 +336,9 @@ object SpecificationPoet {
             else primitiveTypeName(primitiveType!!)
         }
         !primitiveItemType.isNullOrEmpty() -> {
-            if (type.equals("Map")) Map::class.ofTypes(String::class.asTypeName(), valueTypeName(primitiveItemType!!, wrapped))
+            if (type.equals("Map")) Map::class.ofTypes(String::class.asTypeName(), valueTypeName(primitiveItemType, wrapped))
             else {
-                val arrayOfValueOfType = List::class ofType valueTypeName(primitiveItemType!!, true)
+                val arrayOfValueOfType = List::class ofType valueTypeName(primitiveItemType, true)
                 if(wrapped) Value::class ofType arrayOfValueOfType else arrayOfValueOfType
             }
         }
@@ -353,7 +354,8 @@ object SpecificationPoet {
     private fun escape(name: String) = name.replace(".", "")
 }
 
-fun KClass<*>.ofTypes(vararg types: TypeName) = ParameterizedTypeName.get(this.asClassName(),*types.toList().toTypedArray())
-infix fun KClass<*>.ofType(type: TypeName) = ParameterizedTypeName.get(this.asClassName(), type)
+
+fun KClass<*>.ofTypes(vararg types: TypeName) = this.asClassName().parameterizedBy(*types.toList().toTypedArray())
+infix fun KClass<*>.ofType(type: TypeName) = this.asClassName().parameterizedBy(type)
 infix fun KClass<*>.ofType(type: KClass<*>) = this.asClassName() ofType(type.asTypeName())
-infix fun ClassName.ofType(type: TypeName) = ParameterizedTypeName.get(this, type)
+infix fun ClassName.ofType(type: TypeName) = this.parameterizedBy(type)

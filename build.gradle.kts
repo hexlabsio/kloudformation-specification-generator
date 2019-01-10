@@ -17,7 +17,7 @@ val projectVersion = version()
 val projectDescription = """KloudFormation Specification Generator"""
 
 val jacksonVersion = "2.9.7"
-val kotlinpoetVersion = "0.6.0"
+val kotlinpoetVersion = "1.0.1"
 val kotlinVersion = "1.3.0"
 val junitVersion = "5.0.0"
 val gitPublishVersion = "5.0.0"
