@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.expect
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SpecificationPoetTest{
@@ -68,7 +69,7 @@ class SpecificationPoetTest{
             fun `should have propOne as first parameter and should be of type 'Value of type String'`() {
                 with(function.parameters[0]) {
                     expect("propOne") { name }
-                    expect(ParameterizedTypeName.get(Value::class.asTypeName(), String::class.asTypeName())) { type }
+                    expect(Value::class.asTypeName().parameterizedBy(String::class.asTypeName())) { type }
                 }
             }
 
@@ -120,12 +121,12 @@ class SpecificationPoetTest{
             fun `should have one required property named propOne of type 'Value of type String'`() {
                 with(type.propertySpecs[0]) {
                     expect("propOne") { name }
-                    expect(ParameterizedTypeName.get(Value::class.asTypeName(), String::class.asTypeName())) { type }
+                    expect(Value::class.asTypeName().parameterizedBy(String::class.asTypeName())) { type }
                     expect("propOne"){ initializer.toString() }
                 }
                 with(type.primaryConstructor!!.parameters[0]) {
                     expect("propOne") { name }
-                    expect(ParameterizedTypeName.get(Value::class.asTypeName(), String::class.asTypeName())) { type }
+                    expect(Value::class.asTypeName().parameterizedBy(String::class.asTypeName())) { type }
                 }
             }
 
@@ -133,19 +134,18 @@ class SpecificationPoetTest{
             fun `should have one non required property named propTwo of type 'List of type SomeSubProperty'`() {
                 with(type.propertySpecs[1]) {
                     expect("propTwo") { name }
-                    expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).asNullable()) { type }
+                    expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).copy(true)) { type }
                     expect("propTwo"){ initializer.toString() }
                 }
                 with(type.primaryConstructor!!.parameters[1]) {
                     expect("propTwo") { name }
-                    expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).asNullable())  { type }
+                    expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).copy(true))  { type }
                     expect("null"){ defaultValue.toString() }
                 }
             }
             @Nested
             inner class Companion {
-                private val companion = type.companionObject ?: throw AssertionError("Companion Object must exist")
-
+                private val companion = type.typeSpecs.first { it.isCompanion }
                 @Test
                 fun `should have one function named create that returns a Builder passing all required properties`() {
                     with(companion){
@@ -166,8 +166,7 @@ class SpecificationPoetTest{
 
             @Nested
             inner class Builder {
-                private val builder = if(type.typeSpecs.count() != 1) throw AssertionError("Data class should have only one static class named Builder") else type.typeSpecs[0]
-
+                private val builder = type.typeSpecs.firstOrNull { !it.isCompanion } ?: throw AssertionError("Need at least one type spec")
                 @Test
                 fun `should be a class called Builder`() {
                     with(builder) {
@@ -188,12 +187,12 @@ class SpecificationPoetTest{
                 fun `should have one required property named propOne of type 'Value of type String'`() {
                     with(builder.propertySpecs[1]) {
                         expect("propOne") { name }
-                        expect(ParameterizedTypeName.get(Value::class.asTypeName(), String::class.asTypeName())) { type }
+                        expect(Value::class.asTypeName().parameterizedBy(String::class.asTypeName())) { type }
                         expect("propOne"){ initializer.toString() }
                     }
                     with(builder.primaryConstructor!!.parameters[0]) {
                         expect("propOne") { name }
-                        expect(ParameterizedTypeName.get(Value::class.asTypeName(), String::class.asTypeName())) { type }
+                        expect(Value::class.asTypeName().parameterizedBy(String::class.asTypeName())) { type }
                     }
                 }
 
@@ -201,7 +200,7 @@ class SpecificationPoetTest{
                 fun `should have one non required property named propTwo of type 'List of type SomeSubProperty'`() {
                     with(builder.propertySpecs[0]) {
                         expect("propTwo") { name }
-                        expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).asNullable()) { type }
+                        expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).copy(true)) { type }
                         expect("null"){ initializer.toString() }
                     }
                 }
@@ -239,7 +238,7 @@ class SpecificationPoetTest{
                     val templateResourceFunction = resourceFile.members[0] as FunSpec
                     val builderParameter = templateResourceFunction.parameters.find { it.name == "builder" }!!.type as LambdaTypeName
                     val templateResourceClass = resourceFile.members[1] as TypeSpec
-                    val templateResourceBuilder = templateResourceClass.typeSpecs[0]
+                    val templateResourceBuilder = templateResourceClass.typeSpecs.first { !it.isCompanion }
                     val propertyFunctions = templateResourceBuilder.funSpecs.filter { it.name == "template" }
                     val builderFunction = propertyFunctions.find { it.parameters[0].name == "builder" }!!
                     val builderType: LambdaTypeName = builderFunction.parameters[0].type as LambdaTypeName
