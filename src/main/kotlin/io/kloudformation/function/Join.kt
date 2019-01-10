@@ -8,7 +8,7 @@ import io.kloudformation.KloudResource
 import io.kloudformation.Value
 
 @JsonSerialize(using = Join.Serializer::class)
-data class Join(val splitter: String = "", val joins: List<Value<*>>):
+data class Join(val splitter: String = "", val joins: List<Value<*>>) :
         Value<String>, ImportValue.Value<String>, SplitValue<String>, SubValue, IfValue<String> {
     class Serializer : StdSerializer<Join>(Join::class.java) {
         override fun serialize(item: Join, generator: JsonGenerator, provider: SerializerProvider) {
@@ -28,12 +28,12 @@ data class Join(val splitter: String = "", val joins: List<Value<*>>):
 
 operator fun <T, R> Value<T>.plus(resource: KloudResource<R>) = this + resource.ref()
 
-operator fun <T> Value<T>.plus(other: String) = when(this){
+operator fun <T> Value<T>.plus(other: String) = when (this) {
     is Join -> copy(joins = joins + Value.Of(other))
     else -> Join(joins = listOf(this, Value.Of(other)))
 }
 
-operator fun <T,R> Value<T>.plus(other: Value<R>) = when(this){
+operator fun <T, R> Value<T>.plus(other: Value<R>) = when (this) {
     is Join -> copy(joins = joins + other)
-    else ->Join(joins = listOf(this, other))
+    else -> Join(joins = listOf(this, other))
 }

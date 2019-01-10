@@ -2,9 +2,8 @@ package io.kloudformation.model.iam
 
 import io.kloudformation.Value
 
-
 open class Resource(open val resources: List<Value<String>>)
-data class NotResource(override val resources: List<Value<String>>): Resource(resources)
+data class NotResource(override val resources: List<Value<String>>) : Resource(resources)
 val allResources = Resource(listOf(Value.Of("*")))
 val noResources = NotResource(listOf(Value.Of("*")))
 

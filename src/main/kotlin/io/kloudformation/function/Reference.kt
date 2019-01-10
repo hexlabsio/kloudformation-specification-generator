@@ -3,7 +3,7 @@ package io.kloudformation.function
 import io.kloudformation.Value
 
 open class Reference<T>(val ref: String)
-    :   Value<T>,
+    : Value<T>,
         Cidr.Value<T>,
         Att.Value<T>,
         Select.IndexValue<T>,
