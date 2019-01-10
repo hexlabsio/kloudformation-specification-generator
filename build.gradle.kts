@@ -29,6 +29,7 @@ description = projectDescription
 
 
 plugins {
+    id("org.jlleitschuh.gradle.ktlint") version "6.3.1"
     id("com.jfrog.bintray") version "1.8.4"
     kotlin("jvm") version "1.3.0"
     `maven-publish`
@@ -64,6 +65,7 @@ tasks.withType<Test> {
 }
 
 val sourcesJar by tasks.registering(Jar::class) {
+
     classifier = "sources"
     from(sourceSets["main"].allSource)
 }

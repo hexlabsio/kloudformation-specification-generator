@@ -11,7 +11,7 @@ import io.kloudformation.Value
 
 @JsonSerialize(using = Select.Serializer::class)
 data class Select<T>(val index: Select.IndexValue<String>, val objects: Select.ObjectValue<List<Select.ObjectValue<T>>>)
-    : Value<T>, Cidr.Value<T>, ImportValue.Value<T>, SplitValue<T>, SubValue, IfValue<T>{
+    : Value<T>, Cidr.Value<T>, ImportValue.Value<T>, SplitValue<T>, SubValue, IfValue<T> {
 
     interface IndexValue<T>
     interface ObjectValue<T>
@@ -22,10 +22,10 @@ data class Select<T>(val index: Select.IndexValue<String>, val objects: Select.O
             generator.writeArrayFieldStart("Fn::Select")
             generator.writeObject(item.index)
             val codec = generator.codec
-            if(codec is ObjectMapper){
+            if (codec is ObjectMapper) {
                 val props = codec.valueToTree<JsonNode>(item.objects)
-                if(props is ObjectNode || props.size() != 1) generator.writeTree(props)
-                else  generator.writeTree(props[0])
+                if (props is ObjectNode || props.size() != 1) generator.writeTree(props)
+                else generator.writeTree(props[0])
             }
 
             generator.writeEndArray()
@@ -33,4 +33,3 @@ data class Select<T>(val index: Select.IndexValue<String>, val objects: Select.O
         }
     }
 }
-

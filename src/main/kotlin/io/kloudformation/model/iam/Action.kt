@@ -1,8 +1,7 @@
 package io.kloudformation.model.iam
 
-
 open class Action(open val actions: List<String>)
-data class NotAction(override val actions: List<String>): Action(actions)
+data class NotAction(override val actions: List<String>) : Action(actions)
 val allActions = Action(listOf("*"))
 val noActions = NotAction(listOf("*"))
 fun action(action: String) = actions(action)

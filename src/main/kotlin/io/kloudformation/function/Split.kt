@@ -8,10 +8,10 @@ import io.kloudformation.Value
 
 interface SplitValue<T>
 @JsonSerialize(using = Split.Serializer::class)
-data class Split(val delimiter: String, val sourceString: SplitValue<String>):
-        Value<List<Value<String>>>, ImportValue.Value<List<String>>, Select.ObjectValue<List<Select.ObjectValue<String>>>{
+data class Split(val delimiter: String, val sourceString: SplitValue<String>) :
+        Value<List<Value<String>>>, ImportValue.Value<List<String>>, Select.ObjectValue<List<Select.ObjectValue<String>>> {
 
-    class Serializer: StdSerializer<Split>(Split::class.java){
+    class Serializer : StdSerializer<Split>(Split::class.java) {
         override fun serialize(item: Split, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeStartObject()
             generator.writeArrayFieldStart("Fn::Split")
