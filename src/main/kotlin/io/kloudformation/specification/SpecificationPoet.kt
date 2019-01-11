@@ -167,7 +167,7 @@ object SpecificationPoet {
                         if (isResource)
                             it
                                     .superclass(KloudResource::class ofType String::class)
-                                    .addSuperclassConstructorParameter("kloudResourceType = %S", typeName)
+                                    .addSuperclassConstructorParameter("kloudResourceType·= %S", typeName)
                                     .addResourceConstructorParameters()
                     }
                     .addFunctions(functionsFrom(types, typeName, propertyInfo.attributes.orEmpty()))
@@ -222,7 +222,7 @@ object SpecificationPoet {
                                 else null,
                                 FunSpec.builder(it.key.decapitalize())
                                         .addParameter(it.key.decapitalize(), getType(types, typeName, it.value))
-                                        .addCode("return also { it.${it.key.decapitalize()} = ${it.key.decapitalize()} }\n")
+                                        .addCode("return also·{ it.${it.key.decapitalize()}·= ${it.key.decapitalize()} }\n")
                                         .build()
                         )
                     } + listOf(
@@ -230,7 +230,7 @@ object SpecificationPoet {
                                     .also {
                                         val primitiveProperties = propertyInfo.properties.keys + (if (isResource) setOf(resourceProperties) else emptySet())
                                         it.addCode("return ${getClassName(typeName)}( " + primitiveProperties.foldIndexed(if (isResource) logicalName + (if (primitiveProperties.isNotEmpty()) ", " else "") else "") {
-                                            index, acc, item -> acc + (if (index != 0)", " else "") + "${item.decapitalize()} = ${item.decapitalize()}"
+                                            index, acc, item -> acc + (if (index != 0)", " else "") + "${item.decapitalize()}·= ${item.decapitalize()}"
                                         } + ")\n")
                                     }
                                     .build()
@@ -265,10 +265,10 @@ object SpecificationPoet {
             .addParameter(name, type)
             .also {
                 if (property.primitiveItemType != null) {
-                    if (property.type == "Map") it.addCode("return also { it.$name = $name.orEmpty().map { it.key to %T(it.value) }.toMap() }\n", Value.Of::class)
-                    else it.addCode("return also { it.$name = %T($name) }\n", Value.Of::class)
+                    if (property.type == "Map") it.addCode("return also·{ it.$name·= $name.orEmpty().map·{ it.key to %T(it.value) }.toMap() }\n", Value.Of::class)
+                    else it.addCode("return also·{ it.$name·= %T($name) }\n", Value.Of::class)
                 } else if (property.primitiveType != null) {
-                    it.addCode("return also { it.$name = %T($name) }\n", Value.Of::class)
+                    it.addCode("return also·{ it.$name·= %T($name) }\n", Value.Of::class)
                 }
             }
             .build()

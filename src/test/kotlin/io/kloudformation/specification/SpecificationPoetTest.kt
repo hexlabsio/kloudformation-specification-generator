@@ -222,7 +222,7 @@ class SpecificationPoetTest {
                         with(parameters[0]) {
                             expect(List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)) { type }
                         }
-                        expect("return also { it.propTwo = propTwo }") { body.toString().trim() }
+                        expect("return also·{ it.propTwo·= propTwo }") { body.toString().trim() }
                     }
                 }
 
@@ -231,7 +231,7 @@ class SpecificationPoetTest {
                     with(builder.funSpecs[1]) {
                         expect("build") { name }
                         expect(0) { parameters.count() }
-                        expect("return SomeProperty( propOne = propOne, propTwo = propTwo)") { body.toString().trim() }
+                        expect("return SomeProperty( propOne·= propOne, propTwo·= propTwo)") { body.toString().trim() }
                     }
                 }
 
