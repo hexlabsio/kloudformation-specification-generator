@@ -39,7 +39,7 @@ object SpecificationPoet {
         addSuperclassConstructorParameter("$dependsOn=$dependsOn")
         addSuperclassConstructorParameter("$resourceProperties=$resourceProperties")
 
-        addProperty(PropertySpec.builder(logicalName, String::class, KModifier.OVERRIDE).initializer(logicalName).addAnnotation(JsonIgnore::class).build())
+        addProperty(PropertySpec.builder(logicalName, String::class, KModifier.OVERRIDE).initializer(logicalName).build())
         addProperty(PropertySpec.builder(dependsOn, (List::class ofType String::class).copy(true), KModifier.OVERRIDE).initializer(dependsOn).addAnnotation(JsonIgnore::class).build())
         addProperty(PropertySpec.builder(resourceProperties, ResourceProperties::class, KModifier.OVERRIDE).initializer(resourceProperties).addAnnotation(JsonIgnore::class).build())
     }
