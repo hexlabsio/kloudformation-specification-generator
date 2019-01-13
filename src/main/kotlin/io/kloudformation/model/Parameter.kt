@@ -2,6 +2,7 @@ package io.kloudformation.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import io.kloudformation.KloudResource
+import io.kloudformation.Value
 
 data class Parameter<T>(
         @JsonIgnore override val logicalName: String,
@@ -34,7 +35,7 @@ sealed class ParameterType<T>(val type: String){
     object VpcIdParameter: ParameterType<String>("AWS::EC2::VPC::Id")
     object HostedZoneIdParameter: ParameterType<String>("AWS::Route53::HostedZone::Id")
 
-    object AvailabilityZoneListParameter: ParameterType<List<String>>("List<AWS::EC2::AvailabilityZone::Name>")
+    object AvailabilityZoneListParameter: ParameterType<List<Value<String>>>("List<AWS::EC2::AvailabilityZone::Name>")
     object ImageIdListParameter: ParameterType<List<String>>("List<AWS::EC2::Image::Id>")
     object InstanceIdListParameter: ParameterType<List<String>>("List<AWS::EC2::Instance::Id>")
     object KeyPairNameListParameter: ParameterType<List<String>>("List<AWS::EC2::KeyPair::KeyName>")

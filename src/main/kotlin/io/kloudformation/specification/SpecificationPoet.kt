@@ -218,7 +218,7 @@ object SpecificationPoet {
                     } + listOf(
                             FunSpec.builder("build")
                                     .also {
-                                        val primitiveProperties = propertyInfo.properties.keys + (if(isResource) setOf(resourceProperties) else emptySet())
+                                        val primitiveProperties = propertyInfo.properties.keys + (if(isResource) setOf(resourceProperties, "dependsOn") else emptySet())
                                         it.addCode("return ${getClassName(typeName)}( " + primitiveProperties.foldIndexed(if(isResource) logicalName + (if(primitiveProperties.isNotEmpty()) ", " else "") else "") {
                                             index, acc, item ->  acc + (if(index != 0)", " else "") + "${item.decapitalize()} = ${item.decapitalize()}"
                                         } + ")\n")
