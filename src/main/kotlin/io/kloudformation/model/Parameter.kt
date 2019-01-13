@@ -2,6 +2,7 @@ package io.kloudformation.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import io.kloudformation.KloudResource
+import io.kloudformation.Value
 
 data class Parameter<T>(
     @JsonIgnore override val logicalName: String,
@@ -21,8 +22,8 @@ data class Parameter<T>(
 sealed class ParameterType<T>(val type: String) {
     object StringParameter : ParameterType<String>("String")
     object NumberParameter : ParameterType<String>("Number")
-    object NumberListParameter : ParameterType<List<String>>("List<Number>")
-    object CommaDelimitedListParameter : ParameterType<List<String>>("CommaDelimitedList")
+    object NumberListParameter : ParameterType<List<Value<String>>>("List<Number>")
+    object CommaDelimitedListParameter : ParameterType<List<Value<String>>>("CommaDelimitedList")
     object AvailabilityZoneParameter : ParameterType<String>("AWS::EC2::AvailabilityZone::Name")
     object ImageIdParameter : ParameterType<String>("AWS::EC2::Image::Id")
     object InstanceIdParameter : ParameterType<String>("AWS::EC2::Instance::Id")
@@ -34,14 +35,14 @@ sealed class ParameterType<T>(val type: String) {
     object VpcIdParameter : ParameterType<String>("AWS::EC2::VPC::Id")
     object HostedZoneIdParameter : ParameterType<String>("AWS::Route53::HostedZone::Id")
 
-    object AvailabilityZoneListParameter : ParameterType<List<String>>("List<AWS::EC2::AvailabilityZone::Name>")
-    object ImageIdListParameter : ParameterType<List<String>>("List<AWS::EC2::Image::Id>")
-    object InstanceIdListParameter : ParameterType<List<String>>("List<AWS::EC2::Instance::Id>")
-    object KeyPairNameListParameter : ParameterType<List<String>>("List<AWS::EC2::KeyPair::KeyName>")
-    object SecurityGroupNameListParameter : ParameterType<List<String>>("List<AWS::EC2::SecurityGroup::GroupName>")
-    object SecurityGroupIdListParameter : ParameterType<List<String>>("List<AWS::EC2::SecurityGroup::Id>")
-    object SubnetIdListParameter : ParameterType<List<String>>("List<AWS::EC2::Subnet::Id>")
-    object VolumeIdListParameter : ParameterType<List<String>>("List<AWS::EC2::Volume::Id>")
-    object VpcIdListParameter : ParameterType<List<String>>("List<AWS::EC2::VPC::Id>")
-    object HostedZoneIdListParameter : ParameterType<List<String>>("List<AWS::Route53::HostedZone::Id>")
+    object AvailabilityZoneListParameter : ParameterType<List<Value<String>>>("List<AWS::EC2::AvailabilityZone::Name>")
+    object ImageIdListParameter : ParameterType<List<Value<String>>>("List<AWS::EC2::Image::Id>")
+    object InstanceIdListParameter : ParameterType<List<Value<String>>>("List<AWS::EC2::Instance::Id>")
+    object KeyPairNameListParameter : ParameterType<List<Value<String>>>("List<AWS::EC2::KeyPair::KeyName>")
+    object SecurityGroupNameListParameter : ParameterType<List<Value<String>>>("List<AWS::EC2::SecurityGroup::GroupName>")
+    object SecurityGroupIdListParameter : ParameterType<List<Value<String>>>("List<AWS::EC2::SecurityGroup::Id>")
+    object SubnetIdListParameter : ParameterType<List<Value<String>>>("List<AWS::EC2::Subnet::Id>")
+    object VolumeIdListParameter : ParameterType<List<Value<String>>>("List<AWS::EC2::Volume::Id>")
+    object VpcIdListParameter : ParameterType<List<Value<String>>>("List<AWS::EC2::VPC::Id>")
+    object HostedZoneIdListParameter : ParameterType<List<Value<String>>>("List<AWS::Route53::HostedZone::Id>")
 }
