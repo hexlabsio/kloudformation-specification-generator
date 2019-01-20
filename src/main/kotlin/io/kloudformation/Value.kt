@@ -16,6 +16,8 @@ import io.kloudformation.function.ImportValue
 import io.kloudformation.function.Select
 import io.kloudformation.function.SplitValue
 import io.kloudformation.function.SubValue
+import io.kloudformation.metadata.CfnCommand
+import io.kloudformation.metadata.CfnInit
 
 interface Value<out T> {
     @JsonSerialize(using = Of.Serializer::class)
@@ -32,7 +34,9 @@ interface Value<out T> {
             IfValue<T>,
             EqualsValue,
             ConditionalValue<T>,
-            FindInMapValue<T> {
+            FindInMapValue<T>,
+            CfnCommand.Value<T>,
+            CfnInit.Value<T> {
         class Serializer : StdSerializer<Value.Of<*>>(Value.Of::class.java) {
             override fun serialize(item: Value.Of<*>, generator: JsonGenerator, provider: SerializerProvider) {
                 generator.writeObject(item.value)
