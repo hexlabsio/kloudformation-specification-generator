@@ -6,7 +6,6 @@ import io.kloudformation.Value
 import io.kloudformation.model.KloudFormationTemplate
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import java.util.*
 import kotlin.test.expect
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -19,14 +18,14 @@ class SubTest {
     private val sub = "Fn::Sub"
 
     @Test
-    fun `should serialize to Fn  Sub and handle single argument`(){
+    fun `should serialize to Fn  Sub and handle single argument`() {
         expect("{\"$sub\":\"arn:aws:ec2:\${AWS::Region}:\${AWS::AccountId}:vpc/\${vpc}\"}") {
             mapper.writeValueAsString(Sub("arn:aws:ec2:\${AWS::Region}:\${AWS::AccountId}:vpc/\${vpc}"))
         }
     }
 
     @Test
-    fun `should serialize to item and map when map provided`(){
+    fun `should serialize to item and map when map provided`() {
         expect("{\"$sub\":[\"www.\${Domain}\",{\"Domain\":{\"Ref\":\"RootDomainName\"}}]}") {
             mapper.writeValueAsString(Sub("www.\${Domain}",
                     mapOf(
@@ -37,7 +36,7 @@ class SubTest {
     }
 
     @Test
-    fun `should accept Base64, FindInMap, Att, GetAZs, If, ImportValue, Join, Select and Reference for variables`(){
+    fun `should accept Base64, FindInMap, Att, GetAZs, If, ImportValue, Join, Select and Reference for variables`() {
         expect("{\"$sub\":[\"www.\${Domain}\",{\"A\":{\"Fn::Base64\":\"B\"},\"C\":{\"Fn::FindInMap\":[\"D\",\"E\",\"F\"]},\"G\":{\"Fn::GetAtt\":[\"H\",\"I\"]},\"J\":{\"Fn::GetAZs\":\"us-east-1\"},\"K\":{\"Fn::If\":[\"L\",\"M\",\"N\"]},\"O\":{\"Fn::ImportValue\":\"P\"},\"Q\":{\"Fn::Join\":[\":\",[\"R\",\"S\"]]},\"T\":{\"Fn::Select\":[\"0\",\"U\"]},\"V\":{\"Ref\":\"W\"}}]}") {
             mapper.writeValueAsString(Sub("www.\${Domain}",
                     mapOf(
@@ -48,11 +47,10 @@ class SubTest {
                             "K" to If("L", Value.Of("M"), Value.Of("N")),
                             "O" to ImportValue<String>(Value.Of("P")),
                             "Q" to Join(":", listOf(Value.Of("R"), Value.Of("S"))),
-                            "T" to Select(Value.Of("0"),Value.Of(listOf<Select.ObjectValue<String>>(Value.Of("U")))),
+                            "T" to Select(Value.Of("0"), Value.Of(listOf<Select.ObjectValue<String>>(Value.Of("U")))),
                             "V" to Reference<String>("W")
                     )
             ))
         }
     }
 }
-

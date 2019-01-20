@@ -3,7 +3,13 @@ package io.kloudformation.specification
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.LambdaTypeName
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.asTypeName
 import io.kloudformation.Value
 import io.kloudformation.model.KloudFormationTemplate
 import org.junit.jupiter.api.Nested
@@ -12,7 +18,7 @@ import org.junit.jupiter.api.TestInstance
 import kotlin.test.expect
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class SpecificationPoetTest{
+class SpecificationPoetTest {
 
     private val files = SpecificationPoet.generateSpecs(jacksonObjectMapper().configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true).readValue(SpecificationPoetTest::class.java.classLoader.getResourceAsStream("TestSpecification.json")))
     private val propertyPackage = "io.kloudformation.property"
@@ -68,7 +74,7 @@ class SpecificationPoetTest{
             fun `should have propOne as first parameter and should be of type 'Value of type String'`() {
                 with(function.parameters[0]) {
                     expect("propOne") { name }
-                    expect(ParameterizedTypeName.get(Value::class.asTypeName(), String::class.asTypeName())) { type }
+                    expect(Value::class.asTypeName().parameterizedBy(String::class.asTypeName())) { type }
                 }
             }
 
@@ -120,12 +126,12 @@ class SpecificationPoetTest{
             fun `should have one required property named propOne of type 'Value of type String'`() {
                 with(type.propertySpecs[0]) {
                     expect("propOne") { name }
-                    expect(ParameterizedTypeName.get(Value::class.asTypeName(), String::class.asTypeName())) { type }
-                    expect("propOne"){ initializer.toString() }
+                    expect(Value::class.asTypeName().parameterizedBy(String::class.asTypeName())) { type }
+                    expect("propOne") { initializer.toString() }
                 }
                 with(type.primaryConstructor!!.parameters[0]) {
                     expect("propOne") { name }
-                    expect(ParameterizedTypeName.get(Value::class.asTypeName(), String::class.asTypeName())) { type }
+                    expect(Value::class.asTypeName().parameterizedBy(String::class.asTypeName())) { type }
                 }
             }
 
@@ -133,46 +139,43 @@ class SpecificationPoetTest{
             fun `should have one non required property named propTwo of type 'List of type SomeSubProperty'`() {
                 with(type.propertySpecs[1]) {
                     expect("propTwo") { name }
-                    expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).asNullable()) { type }
-                    expect("propTwo"){ initializer.toString() }
+                    expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).copy(true)) { type }
+                    expect("propTwo") { initializer.toString() }
                 }
                 with(type.primaryConstructor!!.parameters[1]) {
                     expect("propTwo") { name }
-                    expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).asNullable())  { type }
-                    expect("null"){ defaultValue.toString() }
+                    expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).copy(true)) { type }
+                    expect("null") { defaultValue.toString() }
                 }
             }
             @Nested
             inner class Companion {
-                private val companion = type.companionObject ?: throw AssertionError("Companion Object must exist")
-
+                private val companion = type.typeSpecs.first { it.isCompanion }
                 @Test
                 fun `should have one function named create that returns a Builder passing all required properties`() {
-                    with(companion){
+                    with(companion) {
                         expect(1, "Should only have one method named create") { funSpecs.count() }
-                        with(funSpecs[0]){
-                            expect( "create") { name }
-                            expect(1){ parameters.count() }
-                            with(parameters[0]){
+                        with(funSpecs[0]) {
+                            expect("create") { name }
+                            expect(1) { parameters.count() }
+                            with(parameters[0]) {
                                 expect("propOne") { name }
                                 expect(Value::class ofType String::class.asTypeName()) { type }
                             }
-                            expect( "return Builder(propOne = propOne)" ){ body.toString().trim() }
+                            expect("return Builder(propOne = propOne)") { body.toString().trim() }
                         }
                     }
                 }
             }
 
-
             @Nested
             inner class Builder {
-                private val builder = if(type.typeSpecs.count() != 1) throw AssertionError("Data class should have only one static class named Builder") else type.typeSpecs[0]
-
+                private val builder = type.typeSpecs.firstOrNull { !it.isCompanion } ?: throw AssertionError("Need at least one type spec")
                 @Test
                 fun `should be a class called Builder`() {
                     with(builder) {
                         expect("Builder") { name }
-                        expect(0){ modifiers.count() }
+                        expect(0) { modifiers.count() }
                     }
                 }
 
@@ -188,12 +191,12 @@ class SpecificationPoetTest{
                 fun `should have one required property named propOne of type 'Value of type String'`() {
                     with(builder.propertySpecs[1]) {
                         expect("propOne") { name }
-                        expect(ParameterizedTypeName.get(Value::class.asTypeName(), String::class.asTypeName())) { type }
-                        expect("propOne"){ initializer.toString() }
+                        expect(Value::class.asTypeName().parameterizedBy(String::class.asTypeName())) { type }
+                        expect("propOne") { initializer.toString() }
                     }
                     with(builder.primaryConstructor!!.parameters[0]) {
                         expect("propOne") { name }
-                        expect(ParameterizedTypeName.get(Value::class.asTypeName(), String::class.asTypeName())) { type }
+                        expect(Value::class.asTypeName().parameterizedBy(String::class.asTypeName())) { type }
                     }
                 }
 
@@ -201,25 +204,25 @@ class SpecificationPoetTest{
                 fun `should have one non required property named propTwo of type 'List of type SomeSubProperty'`() {
                     with(builder.propertySpecs[0]) {
                         expect("propTwo") { name }
-                        expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).asNullable()) { type }
-                        expect("null"){ initializer.toString() }
+                        expect((List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)).copy(true)) { type }
+                        expect("null") { initializer.toString() }
                     }
                 }
 
                 @Test
                 fun `should have one two functions'`() {
-                    expect(2){ builder.funSpecs.count() }
+                    expect(2) { builder.funSpecs.count() }
                 }
 
                 @Test
                 fun `should have one function named propTwo that sets the local propTwo variable and returns the builder`() {
                     with(builder.funSpecs[0]) {
                         expect("propTwo") { name }
-                        expect(1){ parameters.count() }
+                        expect(1) { parameters.count() }
                         with(parameters[0]) {
                             expect(List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)) { type }
                         }
-                        expect("return also { it.propTwo = propTwo }"){ body.toString().trim() }
+                        expect("return also·{ it.propTwo·= propTwo }") { body.toString().trim() }
                     }
                 }
 
@@ -227,24 +230,24 @@ class SpecificationPoetTest{
                 fun `should have one function named build that returns an instance of SomeProperty with all properties set`() {
                     with(builder.funSpecs[1]) {
                         expect("build") { name }
-                        expect(0){ parameters.count() }
-                        expect("return SomeProperty( propOne = propOne, propTwo = propTwo)"){ body.toString().trim() }
+                        expect(0) { parameters.count() }
+                        expect("return SomeProperty( propOne·= propOne, propTwo·= propTwo)") { body.toString().trim() }
                     }
                 }
 
                 @Test
-                fun `should generate fully qualified names for properties with same name as resource`(){
+                fun `should generate fully qualified names for properties with same name as resource`() {
                     val files = SpecificationPoet.generateSpecs(jacksonObjectMapper().configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true).readValue(SpecificationPoetTest::class.java.classLoader.getResourceAsStream("PropertySameAsResource.json")))
                     val resourceFile = files.find { it.packageName == "$resourcePackage.aws.ses" }!!
                     val templateResourceFunction = resourceFile.members[0] as FunSpec
                     val builderParameter = templateResourceFunction.parameters.find { it.name == "builder" }!!.type as LambdaTypeName
                     val templateResourceClass = resourceFile.members[1] as TypeSpec
-                    val templateResourceBuilder = templateResourceClass.typeSpecs[0]
+                    val templateResourceBuilder = templateResourceClass.typeSpecs.first { !it.isCompanion }
                     val propertyFunctions = templateResourceBuilder.funSpecs.filter { it.name == "template" }
                     val builderFunction = propertyFunctions.find { it.parameters[0].name == "builder" }!!
                     val builderType: LambdaTypeName = builderFunction.parameters[0].type as LambdaTypeName
-                    expect(ClassName.bestGuess("$propertyPackage.aws.ses.template.Template.Builder")){ builderType.receiver }
-                    expect(ClassName.bestGuess("$resourcePackage.aws.ses.Template.Builder")){ builderParameter.receiver }
+                    expect(ClassName.bestGuess("$propertyPackage.aws.ses.template.Template.Builder")) { builderType.receiver }
+                    expect(ClassName.bestGuess("$resourcePackage.aws.ses.Template.Builder")) { builderParameter.receiver }
                 }
             }
         }

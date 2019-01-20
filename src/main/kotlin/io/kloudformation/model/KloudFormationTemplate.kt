@@ -18,17 +18,17 @@ import io.kloudformation.function.Intrinsic
 import io.kloudformation.function.Reference
 
 data class KloudFormationTemplate(
-        val awsTemplateFormatVersion: String? = "2010-09-09",
-        @JsonInclude(JsonInclude.Include.NON_NULL) val description: String? = null,
-        @JsonInclude(JsonInclude.Include.NON_NULL) val metadata: Value<JsonNode>? = null,
-        @JsonInclude(JsonInclude.Include.NON_NULL) val parameters: Map<String, Parameter<*>>? = null,
-        @JsonInclude(JsonInclude.Include.NON_NULL) val mappings: Map<String, Map<String, Map<String, Value<Any>>>>? = null,
-        @JsonInclude(JsonInclude.Include.NON_NULL) val conditions: Map<String, Intrinsic>? = null,
-        val resources: Resources,
-        @JsonInclude(JsonInclude.Include.NON_NULL) val outputs: Map<String, Output>? = null
-){
+    val awsTemplateFormatVersion: String? = "2010-09-09",
+    @JsonInclude(JsonInclude.Include.NON_NULL) val description: String? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) val metadata: Value<JsonNode>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) val parameters: Map<String, Parameter<*>>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) val mappings: Map<String, Map<String, Map<String, Value<Any>>>>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) val conditions: Map<String, Intrinsic>? = null,
+    val resources: Resources,
+    @JsonInclude(JsonInclude.Include.NON_NULL) val outputs: Map<String, Output>? = null
+) {
     @JsonSerialize(using = Resources.Serializer::class)
-    data class Resources( val resources: Map<String, KloudResource<*>>) {
+    data class Resources(val resources: Map<String, KloudResource<*>>) {
 
         class Serializer : StdSerializer<Resources>(Resources::class.java) {
             override fun serialize(item: Resources, generator: JsonGenerator, provider: SerializerProvider) {
@@ -38,7 +38,7 @@ data class KloudFormationTemplate(
                     generator.writeObjectFieldStart(it.key)
                     generator.writeFieldName("Type")
                     generator.writeString(it.value.kloudResourceType)
-                    if(it.value.dependsOn?.isEmpty() == false){
+                    if (it.value.dependsOn?.isEmpty() == false) {
                         generator.writeArrayFieldStart("DependsOn")
                         it.value.dependsOn!!.forEach { generator.writeString(it) }
                         generator.writeEndArray()
@@ -56,7 +56,7 @@ data class KloudFormationTemplate(
                         if (deletionPolicy != null) generator.writeObjectField("DeletionPolicy", deletionPolicy)
                         if (codec is ObjectMapper) {
                             val props = codec.valueToTree<ObjectNode>(it.value)
-                            otherProperties.orEmpty().forEach { name, value -> props.put(name, codec.valueToTree<JsonNode>(value)) }
+                            otherProperties.orEmpty().forEach { name, value -> props.replace(name, codec.valueToTree<JsonNode>(value)) }
                             if (props.size() != 0) {
                                 generator.writeFieldName("Properties")
                                 generator.writeTree(props)
@@ -73,86 +73,91 @@ data class KloudFormationTemplate(
     }
 
     class NamingStrategy : PropertyNamingStrategy() {
-        override fun nameForGetterMethod(config: MapperConfig<*>?, method: AnnotatedMethod?, defaultName: String?) =
-                if(defaultName == "awsTemplateFormatVersion") "AWSTemplateFormatVersion"
-                else defaultName!!.capitalize()
+        override fun nameForGetterMethod(config: MapperConfig<*>?, method: AnnotatedMethod, defaultName: String?) =
+                if (defaultName == "awsTemplateFormatVersion") "AWSTemplateFormatVersion"
+                else method.name.substring(3)
     }
 
     class Builder(
-            val awsTemplateFormatVersion: String? = "2010-09-09",
-            val description: String? = null,
-            private val resources: MutableList<KloudResource<String>> = mutableListOf(),
-            private val parameters: MutableList<Parameter<*>> = mutableListOf(),
-            private val mappings: MutableList<Pair<String, Map<String, Map<String, Value<Any>>>>> = mutableListOf(),
-            private val conditions: MutableList<Pair<String, Intrinsic>> = mutableListOf(),
-            private val outputs: MutableList<Pair<String, Output>> = mutableListOf(),
-            private var metadata: Value<JsonNode>? = null,
-            var currentDependees: List<String>? = null
-    ){
-        fun <T: KloudResource<String>> add(resource: T): T = resource.also { this.resources.add(it)  }
+        val awsTemplateFormatVersion: String? = "2010-09-09",
+        val description: String? = null,
+        private val resources: MutableList<KloudResource<String>> = mutableListOf(),
+        private val parameters: MutableList<Parameter<*>> = mutableListOf(),
+        private val mappings: MutableList<Pair<String, Map<String, Map<String, Value<Any>>>>> = mutableListOf(),
+        private val conditions: MutableList<Pair<String, Intrinsic>> = mutableListOf(),
+        private val outputs: MutableList<Pair<String, Output>> = mutableListOf(),
+        private var metadata: Value<JsonNode>? = null,
+        var currentDependees: List<String>? = null
+    ) {
+        fun <T : KloudResource<String>> add(resource: T): T = resource.also { this.resources.add(it) }
         fun build() = KloudFormationTemplate(
                 awsTemplateFormatVersion = awsTemplateFormatVersion,
                 description = description,
                 resources = Resources(resources.map { it.logicalName to it }.toMap()),
-                parameters = if(parameters.isEmpty()) null else parameters.map { it.logicalName to it }.toMap(),
-                mappings = if(mappings.isEmpty()) null else mappings.toMap(),
-                conditions = if(conditions.isEmpty())null else conditions.toMap(),
-                outputs = if(outputs.isEmpty())null else outputs.toMap(),
+                parameters = if (parameters.isEmpty()) null else parameters.map { it.logicalName to it }.toMap(),
+                mappings = if (mappings.isEmpty()) null else mappings.toMap(),
+                conditions = if (conditions.isEmpty())null else conditions.toMap(),
+                outputs = if (outputs.isEmpty())null else outputs.toMap(),
                 metadata = metadata
         )
 
-        fun allocateLogicalName(logicalName: String): String{
+        fun allocateLogicalName(logicalName: String): String {
             var index = 0
-            fun nameFor(index: Int) = logicalName + if(index==0)"" else "${index+1}"
-            while(with(index++){ resources.find { it.logicalName == nameFor(index-1) } != null });
-            return nameFor(index-1)
+            fun nameFor(index: Int) = logicalName + if (index == 0)"" else "${index + 1}"
+            index++
+            while (resources.find { it.logicalName == nameFor(index - 1) } != null) {
+                index++
+            }
+            return nameFor(index - 1)
         }
 
-        fun <R, T: KloudResource<R>> T.then(builder: Builder.(T) -> Unit) = run { also {
+        fun <R, T : KloudResource<R>> T.then(builder: Builder.(T) -> Unit) = run { also {
             val previousDependees = currentDependees
             currentDependees = listOf(logicalName)
-            builder(this)
+            this@Builder.builder(this)
             currentDependees = previousDependees
         } }
 
-        fun <T: KloudResource<*>> Iterable<T>.then(builder: Builder.(Iterable<T>) -> Unit) = run { also {
+        fun <T : KloudResource<*>> Iterable<T>.then(builder: Builder.(Iterable<T>) -> Unit) = run { also {
             val previousDependees = currentDependees
             currentDependees = map { it.logicalName }
-            builder(this)
+            this@Builder.builder(this)
             currentDependees = previousDependees
         } }
 
         operator fun <T> T.unaryPlus() = Value.Of(this)
 
-        fun <T> parameter(logicalName: String,
-                          type: String = "String",
-                          allowedPattern: String? = null,
-                          allowedValues: List<String>? = null,
-                          constraintDescription: String? = null,
-                          default: String? = null,
-                          description: String? = null,
-                          maxLength: String? = null,
-                          maxValue: String? = null,
-                          minLength: String? = null,
-                          minValue: String? = null,
-                          noEcho: String? = null
-        ) = Parameter<T>(logicalName,type, allowedPattern, allowedValues, constraintDescription, default, description, maxLength, maxValue, minLength, minValue, noEcho).also { parameters.add(it) }
+        fun <T> parameter(
+            logicalName: String,
+            type: String = "String",
+            allowedPattern: String? = null,
+            allowedValues: List<String>? = null,
+            constraintDescription: String? = null,
+            default: String? = null,
+            description: String? = null,
+            maxLength: String? = null,
+            maxValue: String? = null,
+            minLength: String? = null,
+            minValue: String? = null,
+            noEcho: String? = null
+        ) = Parameter<T>(logicalName, type, allowedPattern, allowedValues, constraintDescription, default, description, maxLength, maxValue, minLength, minValue, noEcho).also { parameters.add(it) }
 
-        fun <T> parameter(logicalName: String,
-                          type: ParameterType<T>,
-                          allowedPattern: String? = null,
-                          allowedValues: List<String>? = null,
-                          constraintDescription: String? = null,
-                          default: String? = null,
-                          description: String? = null,
-                          maxLength: String? = null,
-                          maxValue: String? = null,
-                          minLength: String? = null,
-                          minValue: String? = null,
-                          noEcho: String? = null
-        ): Parameter<T> = parameter(logicalName,type.type,allowedPattern, allowedValues, constraintDescription, default, description, maxLength, maxValue, minLength, minValue, noEcho)
+        fun <T> parameter(
+            logicalName: String,
+            type: ParameterType<T>,
+            allowedPattern: String? = null,
+            allowedValues: List<String>? = null,
+            constraintDescription: String? = null,
+            default: String? = null,
+            description: String? = null,
+            maxLength: String? = null,
+            maxValue: String? = null,
+            minLength: String? = null,
+            minValue: String? = null,
+            noEcho: String? = null
+        ): Parameter<T> = parameter(logicalName, type.type, allowedPattern, allowedValues, constraintDescription, default, description, maxLength, maxValue, minLength, minValue, noEcho)
 
-        fun <T: Any> mappings(vararg mappings: Pair<String, Map<String, Map<String, Value<T>>>>) = also {
+        fun <T : Any> mappings(vararg mappings: Pair<String, Map<String, Map<String, Value<T>>>>) = also {
             this.mappings += mappings
         }
         fun conditions(vararg conditions: Pair<String, Intrinsic>) = also { this.conditions += conditions }
@@ -175,9 +180,6 @@ data class KloudFormationTemplate(
     }
 
     companion object {
-        fun create(awsTemplateFormatVersion: String? = "2010-09-09", description: String? = null ,dsl: Builder.() -> Unit) = Builder(awsTemplateFormatVersion, description).apply(dsl).build()
+        fun create(awsTemplateFormatVersion: String? = "2010-09-09", description: String? = null, dsl: Builder.() -> Unit) = Builder(awsTemplateFormatVersion, description).apply(dsl).build()
     }
 }
-
-
-

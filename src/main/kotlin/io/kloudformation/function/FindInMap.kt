@@ -10,10 +10,10 @@ interface FindInMapValue<T>
 
 @JsonSerialize(using = FindInMap.Serializer::class)
 data class FindInMap<T>(
-        val mapName: FindInMapValue<String>,
-        val topLevelKey: FindInMapValue<String>,
-        val secondLevelKey: FindInMapValue<String>
-):      Value<T>,
+    val mapName: FindInMapValue<String>,
+    val topLevelKey: FindInMapValue<String>,
+    val secondLevelKey: FindInMapValue<String>
+) : Value<T>,
         FindInMapValue<T>,
         ImportValue.Value<T>,
         SplitValue<T>,
@@ -21,9 +21,8 @@ data class FindInMap<T>(
         Select.ObjectValue<T>,
         SubValue,
         IfValue<T>,
-        ConditionalValue<T>
-{
-    class Serializer: StdSerializer<FindInMap<*>>(FindInMap::class.java){
+        ConditionalValue<T> {
+    class Serializer : StdSerializer<FindInMap<*>>(FindInMap::class.java) {
         override fun serialize(item: FindInMap<*>, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeStartObject()
             generator.writeArrayFieldStart("Fn::FindInMap")
