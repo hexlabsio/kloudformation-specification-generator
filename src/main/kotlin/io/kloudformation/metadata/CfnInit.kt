@@ -1,6 +1,7 @@
 package io.kloudformation.metadata
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.SerializerProvider
@@ -12,7 +13,7 @@ import io.kloudformation.json
 @DslMarker
 annotation class CfnDsl
 
-data class CfnConfigSetRef(val ConfigSet: String) : CfnInit.Value<String>
+data class CfnConfigSetRef(@JsonProperty("ConfigSet") val configSet: String) : CfnInit.Value<String>
 @JsonSerialize(using = CfnInit.Serializer::class)
 data class CfnInit(val configSets: Map<String, List<CfnInit.Value<String>>>, val configs: Map<String, CfnInitConfig>) {
 
@@ -21,10 +22,11 @@ data class CfnInit(val configSets: Map<String, List<CfnInit.Value<String>>>, val
             generator.writeStartObject()
             if (value.configSets.isNotEmpty()) {
                 generator.writeObjectField("configSets", value.configSets)
-                value.configs.forEach { config ->
-                    generator.writeObjectField(config.key, config.value)
-                }
             }
+            value.configs.forEach { config ->
+                generator.writeObjectField(config.key, config.value)
+            }
+            generator.writeEndObject()
         }
     }
 
@@ -39,13 +41,13 @@ data class CfnInit(val configSets: Map<String, List<CfnInit.Value<String>>>, val
             configSets[name] = configs.toList()
         }
 
-        fun defaultConfig(builder: CfnInitConfig.Builder.() -> Unit) = config("config", builder)
-        fun config(name: String, builder: CfnInitConfig.Builder.() -> Unit) { configs[name] = CfnInitConfig.Builder().apply(builder).build() }
+        fun defaultConfig(builder: CfnInitConfig.Builder.() -> Unit = {}) = config("config", builder)
+        fun config(name: String, builder: CfnInitConfig.Builder.() -> Unit = {}) { configs[name] = CfnInitConfig.Builder().apply(builder).build() }
         fun build(): CfnInit = CfnInit(configSets, configs)
     }
 }
 
-fun cfnInitMetadata(builder: CfnInit.Builder.() -> Unit) = "AWS::Cloudformation::Init" to cfnInit(builder)
+fun cfnInitMetadata(builder: CfnInit.Builder.() -> Unit) = "AWS::CloudFormation::Init" to cfnInit(builder)
 fun cfnInit(builder: CfnInit.Builder.() -> Unit) = CfnInit.Builder().apply(builder).build()
 
 enum class PackageManager(val value: String) {
@@ -53,13 +55,13 @@ enum class PackageManager(val value: String) {
 }
 
 data class CfnInitConfig(
-    @JsonInclude(JsonInclude.Include.NON_NULL) val packages: Value<JsonNode>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val groups: Map<String, CfnGroup>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val users: Map<String, CfnUser>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val sources: Map<String, Value<String>>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val files: Map<String, CfnFile>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val commands: Map<String, CfnCommand>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val services: Map<String, Map<String, CfnService>>? = null
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("packages") val packages: Value<JsonNode>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("groups") val groups: Map<String, CfnGroup>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("users") val users: Map<String, CfnUser>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("sources") val sources: Map<String, Value<String>>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("files") val files: Map<String, CfnFile>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("commands") val commands: Map<String, CfnCommand>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("services") val services: Map<String, Map<String, CfnService>>? = null
 ) {
     class Builder(
         private var packages: Value<JsonNode>? = null,
@@ -79,15 +81,15 @@ data class CfnInitConfig(
             groups = CfnGroup.GroupsBuilder().apply(builder).build().toMutableMap()
         }
 
-        fun files(builder: CfnFile.FilesBuilder.() -> Unit) {
+        fun files(builder: CfnFile.FilesBuilder.() -> Unit = {}) {
             files = CfnFile.FilesBuilder().apply(builder).build().toMutableMap()
         }
 
-        fun services(builder: CfnService.ServicesBuilder.() -> Unit) {
+        fun services(builder: CfnService.ServicesBuilder.() -> Unit = {}) {
             services = CfnService.ServicesBuilder().apply(builder).build().toMutableMap()
         }
 
-        fun users(builder: CfnUser.UsersBuilder.() -> Unit) {
+        fun users(builder: CfnUser.UsersBuilder.() -> Unit = {}) {
             users = CfnUser.UsersBuilder().apply(builder).build().toMutableMap()
         }
 
@@ -135,12 +137,12 @@ data class CfnInitConfig(
 }
 
 data class CfnService(
-    @JsonInclude(JsonInclude.Include.NON_NULL) val ensureRunning: Value<Boolean>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val enabled: Value<Boolean>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val files: List<Value<String>>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val sources: List<Value<String>>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val packages: Map<String, List<Value<String>>>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val commands: List<Value<String>>? = null
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("ensureRunning") val ensureRunning: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("enabled") val enabled: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("files") val files: List<Value<String>>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("sources") val sources: List<Value<String>>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("packages") val packages: Map<String, List<Value<String>>>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("commands") val commands: List<Value<String>>? = null
 ) {
     @CfnDsl
     class ServicesBuilder(private val services: MutableMap<String, Map<String, CfnService>> = mutableMapOf()) {
@@ -158,17 +160,17 @@ data class CfnService(
 
             @CfnDsl
             class ServiceBuilder(
-                private var ensureRunning: Value<Boolean>? = null,
-                private var enabled: Value<Boolean>? = null,
+                private var ensureRunning: Value<String>? = null,
+                private var enabled: Value<String>? = null,
                 private var files: List<Value<String>>? = null,
                 private var sources: List<Value<String>>? = null,
                 private var packages: Map<String, List<Value<String>>>? = null,
                 private var commands: List<Value<String>>? = null
             ) {
-                fun ensureRunning(ensureRunning: Boolean) { this.ensureRunning = Value.Of(ensureRunning) }
-                fun ensureRunning(ensureRunning: Value<Boolean>) { this.ensureRunning = ensureRunning }
-                fun enabled(enabled: Boolean) { this.enabled = Value.Of(enabled) }
-                fun enabled(enabled: Value<Boolean>) { this.enabled = enabled }
+                fun ensureRunning(ensureRunning: Boolean) { this.ensureRunning = Value.Of(ensureRunning.toString()) }
+                fun ensureRunning(ensureRunning: Value<String>) { this.ensureRunning = ensureRunning }
+                fun enabled(enabled: Boolean) { this.enabled = Value.Of(enabled.toString()) }
+                fun enabled(enabled: Value<String>) { this.enabled = enabled }
                 fun files(files: List<Value<String>>) { this.files = files }
                 fun sources(sources: List<Value<String>>) { this.sources = sources }
                 fun packages(vararg packages: Pair<String, List<Value<String>>>) { this.packages = packages.toMap() }
@@ -187,12 +189,12 @@ data class CfnService(
 }
 class CfnArrayCommand(vararg items: Value<String>) : ArrayList<Value<String>>(items.toMutableList()), CfnCommand.Value<String>
 data class CfnCommand(
-    val command: CfnCommand.Value<String>,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val env: Map<String, io.kloudformation.Value<String>>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val cwd: io.kloudformation.Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val test: io.kloudformation.Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val ignoreErrors: io.kloudformation.Value<Boolean>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val waitAfterCompletion: io.kloudformation.Value<String>? = null
+    @JsonProperty("command") val command: CfnCommand.Value<String>,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("env") val env: Map<String, io.kloudformation.Value<String>>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("cwd") val cwd: io.kloudformation.Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("test") val test: io.kloudformation.Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("ignoreErrors") val ignoreErrors: io.kloudformation.Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("waitAfterCompletion") val waitAfterCompletion: io.kloudformation.Value<String>? = null
 ) {
     interface Value<T>
     class Builder(
@@ -200,7 +202,7 @@ data class CfnCommand(
         private var env: Map<String, io.kloudformation.Value<String>>? = null,
         private var cwd: io.kloudformation.Value<String>? = null,
         private var test: io.kloudformation.Value<String>? = null,
-        private var ignoreErrors: io.kloudformation.Value<Boolean>? = null,
+        private var ignoreErrors: io.kloudformation.Value<String>? = null,
         private var waitAfterCompletion: io.kloudformation.Value<String>? = null
     ) {
 
@@ -209,8 +211,8 @@ data class CfnCommand(
         fun cwd(cwd: io.kloudformation.Value<String>) { this.cwd = cwd }
         fun test(test: String) { this.test = io.kloudformation.Value.Of(test) }
         fun test(test: io.kloudformation.Value<String>) { this.test = test }
-        fun ignoreErrors(ignoreErrors: Boolean) { this.ignoreErrors = io.kloudformation.Value.Of(ignoreErrors) }
-        fun ignoreErrors(ignoreErrors: io.kloudformation.Value<Boolean>) { this.ignoreErrors = ignoreErrors }
+        fun ignoreErrors(ignoreErrors: Boolean) { this.ignoreErrors = io.kloudformation.Value.Of(ignoreErrors.toString()) }
+        fun ignoreErrors(ignoreErrors: io.kloudformation.Value<String>) { this.ignoreErrors = ignoreErrors }
         fun waitAfterCompletion(waitAfterCompletion: String) { this.waitAfterCompletion = io.kloudformation.Value.Of(waitAfterCompletion) }
         fun waitAfterCompletion(waitAfterCompletion: io.kloudformation.Value<String>) { this.waitAfterCompletion = waitAfterCompletion }
 
@@ -219,19 +221,19 @@ data class CfnCommand(
 }
 
 open class CfnFile(
-    @JsonInclude(JsonInclude.Include.NON_NULL) val encoding: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val owner: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val group: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val mode: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val authentication: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) val context: Value<JsonNode>? = null
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("encoding") val encoding: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("owner") val owner: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("group") val group: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("mode") val mode: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("authentication") val authentication: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("context") val context: Value<JsonNode>? = null
 ) {
     @CfnDsl
     class FilesBuilder(private val files: MutableList<Pair<String, CfnFile>> = mutableListOf()) {
-        operator fun String.invoke(content: Value<String>, fileBuilder: FileBuilder.() -> Unit) {
+        operator fun String.invoke(content: Value<String>, fileBuilder: FileBuilder.() -> Unit = {}) {
             files.add(this to FileBuilder(content = content).apply(fileBuilder).build())
         }
-        fun remote(name: String, source: Value<String>, fileBuilder: FileBuilder.() -> Unit) {
+        fun remote(name: String, source: Value<String>, fileBuilder: FileBuilder.() -> Unit = {}) {
             files.add(name to FileBuilder(source = source).apply(fileBuilder).build())
         }
         fun build() = files.toMap()
@@ -264,32 +266,32 @@ open class CfnFile(
     }
 }
 class CfnRemoteFile(
-    val source: Value<String>,
-    @JsonInclude(JsonInclude.Include.NON_NULL) encoding: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) owner: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) group: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) mode: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) authentication: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) context: Value<JsonNode>? = null
+    @JsonProperty("source") val source: Value<String>,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("encoding") encoding: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("owner") owner: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("group") group: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("mode") mode: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("authentication") authentication: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("context") context: Value<JsonNode>? = null
 ) : CfnFile(
         encoding, owner, group, mode, authentication, context
 )
 class CfnFileContent(
-    val content: Value<String>,
-    @JsonInclude(JsonInclude.Include.NON_NULL) encoding: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) owner: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) group: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) mode: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) authentication: Value<String>? = null,
-    @JsonInclude(JsonInclude.Include.NON_NULL) context: Value<JsonNode>? = null
+    @JsonProperty("content") val content: Value<String>,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("encoding") encoding: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("owner") owner: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("group") group: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("mode") mode: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("authentication") authentication: Value<String>? = null,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("context") context: Value<JsonNode>? = null
 ) : CfnFile(
         encoding, owner, group, mode, authentication, context
 )
 
 data class CfnUser(
-    val uid: Value<String>,
-    val groups: Value<List<Value<String>>>,
-    val homeDir: Value<String>
+    @JsonProperty("uid") val uid: Value<String>,
+    @JsonProperty("groups") val groups: Value<List<Value<String>>>,
+    @JsonProperty("homeDir") val homeDir: Value<String>
 ) {
     @CfnDsl
     class UsersBuilder(private val users: MutableList<Pair<String, CfnUser>> = mutableListOf()) {
@@ -316,6 +318,6 @@ interface CfnGroup {
     }
 }
 data class CfnGroupWithId(
-    val gid: Value<String>
+    @JsonProperty("gid") val gid: Value<String>
 ) : CfnGroup
 class CfnGroupNoId : CfnGroup
