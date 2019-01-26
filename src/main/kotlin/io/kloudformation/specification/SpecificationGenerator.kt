@@ -8,12 +8,12 @@ private val specificationListUrl = "https://docs.aws.amazon.com/AWSCloudFormatio
 
 fun main(args: Array<String>) {
     val scrapedLinks = SpecificationScraper.scrapeLinks(specificationListUrl)
-    val downloadedSpecificationStrings =  SpecificationDownloader.downloadAll(scrapedLinks)
+    val downloadedSpecificationStrings = SpecificationDownloader.downloadAll(scrapedLinks)
     val parsedSpecifications = downloadedSpecificationStrings.map {
         try {
             System.out.println(it.key)
-             jacksonObjectMapper.readValue<Specification>(it.value)
-        } catch(ex: Exception) {
+            jacksonObjectMapper.readValue<Specification>(it.value)
+        } catch (ex: Exception) {
             System.err.println("Failed to parse ${it.key} specification")
             Specification(emptyMap(), emptyMap(), "")
         }

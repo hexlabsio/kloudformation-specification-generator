@@ -100,7 +100,7 @@ object SpecificationPoet {
 
     fun generate(specification: Specification) {
         File(System.getProperty("user.dir") + "/src/main/resources/info.json").writeText(libraryInfoFrom(specification))
-        generateSpecs(specification).forEach { it.writeTo(File(System.getProperty("user.dir") + "/target/generated-sources")) }
+        generateSpecs(specification).forEach { it.writeTo(File(System.getProperty("user.dir") + "/build/generated")) }
     }
 
     data class Info(val type: String, val name: String, val resource: Boolean, val required: Map<String, String>, val notRequired: Map<String, String>)
