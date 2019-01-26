@@ -4,24 +4,20 @@ import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.module.kotlin.readValue
 
 private val jacksonObjectMapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
-private val regionSpecifications = listOf(
-        "ap-northeast-1",
-        "ap-northeast-2",
-        "ap-south-1",
-        "ap-southeast-1",
-        "ap-southeast-2",
-        "ca-central-1",
-        "eu-central-1",
-        "eu-west-1",
-        "eu-west-2",
-        "sa-east-1",
-        "us-east-1",
-        "us-east-2",
-        "us-west-1",
-        "us-west-2"
-)
+private val specificationListUrl = "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-resource-specification.html"
+
 fun main(args: Array<String>) {
-    SpecificationPoet.generate(SpecificationMerger.merge(SpecificationDownloader.downloadAll().map {
-        jacksonObjectMapper.readValue<Specification>(it)
-    }))
+    val scrapedLinks = SpecificationScraper.scrapeLinks(specificationListUrl)
+    val downloadedSpecificationStrings =  SpecificationDownloader.downloadAll(scrapedLinks)
+    val parsedSpecifications = downloadedSpecificationStrings.map {
+        try {
+            System.out.println(it.key)
+             jacksonObjectMapper.readValue<Specification>(it.value)
+        } catch(ex: Exception) {
+            System.err.println("Failed to parse ${it.key} specification")
+            Specification(emptyMap(), emptyMap(), "")
+        }
+    }
+    val mergedSpecification = SpecificationMerger.merge(parsedSpecifications)
+    SpecificationPoet.generate(mergedSpecification)
 }
