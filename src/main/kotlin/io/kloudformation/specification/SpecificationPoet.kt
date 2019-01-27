@@ -8,10 +8,6 @@ import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.ParameterSpec
-import io.kloudformation.function.Att
-import io.kloudformation.model.KloudFormationTemplate
-import java.io.File
-import kotlin.reflect.KClass
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
@@ -22,6 +18,10 @@ import io.kloudformation.KloudResource
 import io.kloudformation.KloudResourceBuilder
 import io.kloudformation.ResourceProperties
 import io.kloudformation.Value
+import io.kloudformation.function.Att
+import io.kloudformation.model.KloudFormationTemplate
+import java.io.File
+import kotlin.reflect.KClass
 
 object SpecificationPoet {
 
@@ -35,9 +35,9 @@ object SpecificationPoet {
             ParameterSpec.builder(resourceProperties, ResourceProperties::class).defaultValue("%T()", ResourceProperties::class).build()
     )
     private fun TypeSpec.Builder.addResourceConstructorParameters() = also {
-        addSuperclassConstructorParameter("$logicalName=$logicalName")
-        addSuperclassConstructorParameter("$dependsOn=$dependsOn")
-        addSuperclassConstructorParameter("$resourceProperties=$resourceProperties")
+        addSuperclassConstructorParameter("$logicalName·=·$logicalName")
+        addSuperclassConstructorParameter("$dependsOn·=·$dependsOn")
+        addSuperclassConstructorParameter("$resourceProperties·=·$resourceProperties")
 
         addProperty(PropertySpec.builder(logicalName, String::class, KModifier.OVERRIDE).initializer(logicalName).build())
         addProperty(PropertySpec.builder(dependsOn, (List::class ofType String::class).copy(true), KModifier.OVERRIDE).initializer(dependsOn).addAnnotation(JsonIgnore::class).build())
@@ -146,14 +146,14 @@ object SpecificationPoet {
         val packageName = getPackageName(isResource, typeName)
         it.builder(name.decapitalize()).also { func ->
             if (isResource) {
-                func.addCode("return add( builder( %T.create(${paramListFrom(propertyInfo, true, true, name)}) ).build() )\n", ClassName.bestGuess("$packageName.$name"))
+                func.addCode("return add(builder(%T.create(${paramListFrom(propertyInfo, true, true, name)})).build())\n", ClassName.bestGuess("$packageName.$name"))
             } else {
-                func.addCode("return builder( %T.create(${paramListFrom(propertyInfo, false)}) ).build()\n", ClassName.bestGuess("$packageName.$name"))
+                func.addCode("return builder(%T.create(${paramListFrom(propertyInfo, false)})).build()\n", ClassName.bestGuess("$packageName.$name"))
             }
             propertyInfo.properties.sorted().filter { it.value.required }.map { func.addParameter(buildParameter(types, typeName, it.key, it.value)) }
             if (isResource) func.addParameters(builderFunctionResourceParameters)
             val builderTypeName = builderClassNameFrom("$packageName.$name")
-            func.addParameter(ParameterSpec.builder("builder", LambdaTypeName.get(builderTypeName, returnType = builderTypeName)).defaultValue("{ this }").build())
+            func.addParameter(ParameterSpec.builder("builder", LambdaTypeName.get(builderTypeName, returnType = builderTypeName)).defaultValue("{·this·}").build())
         }
                 .receiver(KloudFormationTemplate.Builder::class)
                 .build()
@@ -167,7 +167,7 @@ object SpecificationPoet {
                         if (isResource)
                             it
                                     .superclass(KloudResource::class ofType String::class)
-                                    .addSuperclassConstructorParameter("kloudResourceType·= %S", typeName)
+                                    .addSuperclassConstructorParameter("kloudResourceType·=·%S", typeName)
                                     .addResourceConstructorParameters()
                     }
                     .addFunctions(functionsFrom(types, typeName, propertyInfo.attributes.orEmpty()))
@@ -222,7 +222,7 @@ object SpecificationPoet {
                                 else null,
                                 FunSpec.builder(it.key.decapitalize())
                                         .addParameter(it.key.decapitalize(), getType(types, typeName, it.value))
-                                        .addCode("return also·{ it.${it.key.decapitalize()}·= ${it.key.decapitalize()} }\n")
+                                        .addCode("return also·{ it.${it.key.decapitalize()}·=·${it.key.decapitalize()} }\n")
                                         .build()
                         )
                     } + listOf(
@@ -230,7 +230,7 @@ object SpecificationPoet {
                                     .also {
                                         val primitiveProperties = propertyInfo.properties.keys + (if (isResource) setOf(resourceProperties, "dependsOn") else emptySet())
                                         it.addCode("return ${getClassName(typeName)}( " + primitiveProperties.foldIndexed(if (isResource) logicalName + (if (primitiveProperties.isNotEmpty()) ", " else "") else "") {
-                                            index, acc, item -> acc + (if (index != 0)", " else "") + "${item.decapitalize()}·= ${item.decapitalize()}"
+                                            index, acc, item -> acc + (if (index != 0)", " else "") + "${item.decapitalize()}·=·${item.decapitalize()}"
                                         } + ")\n")
                                     }
                                     .build()
@@ -243,10 +243,10 @@ object SpecificationPoet {
                 propertyInfo.properties.sorted().filter { it.value.required }.keys.map { it.decapitalize() } +
                 (if (isResource) listOf(resourceProperties) else emptyList())
         return nameList.foldIndexed("") {
-            index, acc, name -> acc + (if (index != 0) ", " else "") + "$name = " +
+            index, acc, name -> acc + (if (index != 0) ", " else "") + "$name·=·" +
                 (
-                        if (name == dependsOn && addCurrentDependee) "$name ?: currentDependees"
-                        else if (name == logicalName && !specialLogicalName.isNullOrEmpty()) "$name ?: allocateLogicalName(\"$specialLogicalName\")"
+                        if (name == dependsOn && addCurrentDependee) "$name·?:·currentDependees"
+                        else if (name == logicalName && !specialLogicalName.isNullOrEmpty()) "$name·?:·allocateLogicalName(\"$specialLogicalName\")"
                         else name
                         )
         }
@@ -289,7 +289,7 @@ object SpecificationPoet {
                                         receiver = ClassName.bestGuess("${parent.canonicalName}.Builder"),
                                         returnType = ClassName.bestGuess("${parent.canonicalName}.Builder")
                                 )
-                        ).defaultValue("{ this }").build()
+                        ).defaultValue("{·this·}").build()
                 )
                 .addCode("return ${name.decapitalize()}(%T.create(${childParams(propertyNames)}).builder().build())\n", ClassName.bestGuess(parent.canonicalName))
                 .build()

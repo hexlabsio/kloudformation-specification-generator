@@ -87,14 +87,14 @@ class SpecificationPoetTest {
                         expect(ClassName.bestGuess("io.kloudformation.property.aws.ec2.instance.$className.Builder")) { receiver }
                         expect(0) { parameters.count() }
                         expect(ClassName.bestGuess("io.kloudformation.property.aws.ec2.instance.$className.Builder")) { returnType }
-                        expect("{ this }") { defaultValue.toString() }
+                        expect("{·this·}") { defaultValue.toString() }
                     }
                 }
             }
 
             @Test
             fun `should result in invocation of builder function then call of build`() {
-                expect("return builder( io.kloudformation.property.aws.ec2.instance.$className.create(propOne = propOne) ).build()") {
+                expect("return builder(io.kloudformation.property.aws.ec2.instance.$className.create(propOne·=·propOne)).build()") {
                     function.body.toString().trim()
                 }
             }
@@ -162,7 +162,7 @@ class SpecificationPoetTest {
                                 expect("propOne") { name }
                                 expect(Value::class ofType String::class.asTypeName()) { type }
                             }
-                            expect("return Builder(propOne = propOne)") { body.toString().trim() }
+                            expect("return Builder(propOne·=·propOne)") { body.toString().trim() }
                         }
                     }
                 }
@@ -222,7 +222,7 @@ class SpecificationPoetTest {
                         with(parameters[0]) {
                             expect(List::class ofType ClassName.bestGuess(SomeSubProperty().canonicalName)) { type }
                         }
-                        expect("return also·{ it.propTwo·= propTwo }") { body.toString().trim() }
+                        expect("return also·{ it.propTwo·=·propTwo }") { body.toString().trim() }
                     }
                 }
 
@@ -231,7 +231,7 @@ class SpecificationPoetTest {
                     with(builder.funSpecs[1]) {
                         expect("build") { name }
                         expect(0) { parameters.count() }
-                        expect("return SomeProperty( propOne·= propOne, propTwo·= propTwo)") { body.toString().trim() }
+                        expect("return SomeProperty( propOne·=·propOne, propTwo·=·propTwo)") { body.toString().trim() }
                     }
                 }
 

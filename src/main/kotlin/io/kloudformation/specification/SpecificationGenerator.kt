@@ -11,7 +11,6 @@ fun main(args: Array<String>) {
     val downloadedSpecificationStrings = SpecificationDownloader.downloadAll(scrapedLinks)
     val parsedSpecifications = downloadedSpecificationStrings.map {
         try {
-            System.out.println(it.key)
             jacksonObjectMapper.readValue<Specification>(it.value)
         } catch (ex: Exception) {
             System.err.println("Failed to parse ${it.key} specification")
